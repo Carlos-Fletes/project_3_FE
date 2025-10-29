@@ -16,7 +16,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.yourname.project3fe", 
+      "package": "com.yourname.project3fe",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -24,13 +24,19 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
-    "scheme": "project3fe", 
-    "deepLinks": ["auth"],
+    "scheme": "project3fe",
+    "deepLinks": [
+      "auth"
+    ],
     "plugins": [
-      "expo-dev-client"
+      "expo-dev-client",
+      "expo-secure-store"
     ],
     "extra": {
-      "backendUrl": "https://project-3-backend.herokuapp.com"
+      "backendUrl": "https://project-3-backend.herokuapp.com",
+      "eas": {
+        "projectId": "06116d5c-c203-45d3-830d-0f18adf9fb1b"
+      }
     },
     "runtimeVersion": {
       "policy": "appVersion"
