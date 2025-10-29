@@ -16,6 +16,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.yourname.project3fe", 
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -23,12 +24,14 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
+    "scheme": "project3fe", 
+    "deepLinks": ["auth"],
     "plugins": [
       "expo-dev-client"
     ],
+    "extra": {
+      "backendUrl": "https://project-3-backend.herokuapp.com"
+    },
     "runtimeVersion": {
       "policy": "appVersion"
     },
