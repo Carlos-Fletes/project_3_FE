@@ -118,6 +118,9 @@ When you're ready to integrate your API:
 - TypeScript 5.9.2
 - React 19.1.0
 
+## How to Run 💻
+
+- npx expo start --dev-client
 ---
 
 Happy coding! 🎉
