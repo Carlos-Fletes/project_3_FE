@@ -1,33 +1,27 @@
+// Home.tsx
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 
-export default function Home() {
+interface HomeProps {
+  userInfo: {
+    name?: string;
+    email?: string;
+    picture?: string;
+  };
+}
+
+export default function Home({ userInfo }: HomeProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.homeTitle}>🏠 Welcome Home!</Text>
-      <Text style={styles.homeSubtitle}>You are now logged in via Google OAuth.</Text>
+      {userInfo.picture && <Image source={{ uri: userInfo.picture }} style={styles.image} />}
+      <Text style={styles.text}>Welcome, {userInfo.name}</Text>
+      <Text style={styles.text}>{userInfo.email}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  homeTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  homeSubtitle: {
-    fontSize: 18,
-    color: '#666',
-    textAlign: 'center',
-  },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  text: { fontSize: 20, marginVertical: 5 },
+  image: { width: 100, height: 100, borderRadius: 50, marginBottom: 10 },
 });
