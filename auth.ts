@@ -1,55 +1,85 @@
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri } from 'expo-auth-session';
-import { useEffect, useState } from 'react';
+// auth.ts
+import * as SecureStore from 'expo-secure-store';
+import axios, { InternalAxiosRequestConfig } from 'axios';
 
-WebBrowser.maybeCompleteAuthSession();
+// ============================
+// 🔐 TOKEN STORAGE HELPERS
+// ============================
 
-interface UserInfo {
-  email?: string;
-  name?: string;
-  picture?: string;
-}
+const TOKEN_KEY = 'jwt_token';
 
-export function useGoogleAuth() {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [idToken, setIdToken] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+export const saveToken = async (token: string): Promise<void> => {
+  try {
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+  } catch (err) {
+    console.error('Error saving token:', err);
+  }
+};
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: '859878511345-oq80lj559na0rujgf36ga1d70op7li77.apps.googleusercontent.com',
-    redirectUri: makeRedirectUri({ native: 'myapp://' }),
-    scopes: ['openid', 'profile', 'email'],
-  });
+export const getToken = async (): Promise<string | null> => {
+  try {
+    return await SecureStore.getItemAsync(TOKEN_KEY);
+  } catch (err) {
+    console.error('Error retrieving token:', err);
+    return null;
+  }
+};
 
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { authentication } = response;
-      setAccessToken(authentication?.accessToken ?? null);
-      setIdToken(authentication?.idToken ?? null);
+export const removeToken = async (): Promise<void> => {
+  try {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  } catch (err) {
+    console.error('Error deleting token:', err);
+  }
+};
+
+// ============================
+// 🌐 AXIOS INSTANCE
+// ============================
+
+export const api = axios.create({
+  baseURL: 'http://10.0.2.2:8080/api', // local backend (Android emulator)
+  headers: { 'Content-Type': 'application/json' },
+});
+
+// ✅ Interceptor (type-safe for Axios v1+)
+api.interceptors.request.use(
+  async (config: InternalAxiosRequestConfig) => {
+    const token = await getToken();
+    if (token) {
+      // Mutate headers safely
+      config.headers.set('Authorization', `Bearer ${token}`);
     }
-  }, [response]);
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      if (accessToken) {
-        try {
-          const res = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          const data = await res.json();
-          setUserInfo(data);
-        } catch (err) {
-          console.error('Failed to fetch user info:', err);
-        }
-      }
-    };
-    fetchUserInfo();
-  }, [accessToken]);
+// ============================
+// 🚀 AUTH HELPER FUNCTIONS
+// ============================
 
-  const login = async () => {
-    await promptAsync();
-  };
+/**
+ * Authenticate with Google token -> backend issues JWT
+ */
+export const authenticateWithGoogle = async (googleToken: string) => {
+  const res = await api.post('/auth/google', { token: googleToken });
+  const backendToken: string = res.data.token;
+  await saveToken(backendToken);
+  return backendToken;
+};
 
-  return { login, request, accessToken, idToken, userInfo };
-}
+/**
+ * Get logged-in user info
+ */
+export const getCurrentUser = async () => {
+  const res = await api.get('/user/me');
+  return res.data;
+};
+
+/**
+ * Logout user
+ */
+export const logout = async (): Promise<void> => {
+  await removeToken();
+};

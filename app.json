@@ -33,7 +33,10 @@
               "host": "*"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -42,7 +45,8 @@
     },
     "plugins": [
       "expo-dev-client",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-secure-store"
     ],
     "runtimeVersion": {
       "policy": "appVersion"

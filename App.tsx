@@ -1,42 +1,25 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Platform, Text } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import Home from './Home';
+// App.tsx
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from './LoginScreen';
+import Home from './Home';
+
+// ✅ Export this type
+export type RootStackParamList = {
+  Login: undefined;
+  Home: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
-  const [userInfo, setUserInfo] = useState<any | null>(null);
-
-  const handleLoginSuccess = (info: any) => {
-    setUserInfo(info);
-  };
-
-  if (userInfo) {
-    return <Home userInfo={userInfo} />;
-  }
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Project 3 Frontend</Text>
-      <Text style={styles.subtitle}>
-        {Platform.OS === 'web' ? 'Running on Web' : `Running on ${Platform.OS}`}
-      </Text>
-
-      <LoginScreen onLoginSuccess={handleLoginSuccess} />
-
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Home" component={Home} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#f0f0f0',
-  },
-  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 10 },
-  subtitle: { fontSize: 18, marginBottom: 20 },
-});
