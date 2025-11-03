@@ -21,19 +21,27 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.cfletes.project3fe"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-dev-client"
+      "expo-dev-client",
+      "expo-web-browser"
     ],
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/your-project-id"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "06116d5c-c203-45d3-830d-0f18adf9fb1b"
+      }
+    },
+    "scheme": "myapp"
   }
 }
