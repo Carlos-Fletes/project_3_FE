@@ -266,19 +266,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sidebarWide: {
-    width: '28%',
+    width: '22%',
+    maxWidth: 280,
     marginRight: 16,
   },
   feed: {
     flex: 1,
   },
   feedWide: {
-    width: '70%',
+    flex: 1,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOpacity: 0.08,
@@ -286,35 +287,35 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: 12,
     color: '#333',
   },
   statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
   },
   statValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#7C6FD8',
   },
   newPollButton: {
     backgroundColor: '#7C6FD8',
-    padding: 12,
+    padding: 10,
     borderRadius: 8,
     alignItems: 'center',
   },
   newPollText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 13,
   },
   trendingRow: {
     flexDirection: 'row',
