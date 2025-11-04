@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import Login from './screens/login';
 import Home from './screens/home';
+import Profile from './screens/profile';
 
 const Stack = createNativeStackNavigator();
 
@@ -20,6 +21,11 @@ export default function App() {
           name="Home"
           component={Home}
           options={{ title: 'BetSocial' }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={Profile}
+          options={{ title: 'Profile' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

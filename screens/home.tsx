@@ -1,7 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, TextInput } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+// Add this type definition
+type RootStackParamList = {
+  Login: undefined;
+  Home: undefined;
+  Profile: undefined;
+};
+
+type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export default function Home() {
+  const navigation = useNavigation<HomeScreenNavigationProp>();  // Add this line
   const { width } = useWindowDimensions();
   const isWide = width > 800;
 
@@ -27,7 +39,9 @@ export default function Home() {
         <TouchableOpacity style={styles.activeTab}>
           <Text style={styles.activeTabText}>🏠 Feed</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.inactiveTab}>
+        <TouchableOpacity 
+          style={styles.inactiveTab}
+          onPress={() => navigation.navigate('Profile')}>
           <Text style={styles.inactiveTabText}>👤 Profile</Text>
         </TouchableOpacity>
       </View>

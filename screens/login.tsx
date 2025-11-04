@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 type RootStackParamList = {
   Login: undefined;
   Home: undefined;
+  Profile: undefined;
 };
 
 //Tell useNavigation what type it is
