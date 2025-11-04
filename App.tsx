@@ -19,7 +19,7 @@ export default function App() {
         <Stack.Screen
           name="Home"
           component={Home}
-          options={{ title: 'CloutCast' }}
+          options={{ title: 'BetSocial' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

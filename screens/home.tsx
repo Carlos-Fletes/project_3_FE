@@ -1,91 +1,486 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, TextInput } from 'react-native';
 
 export default function Home() {
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Welcome to BetSocial 🎯</Text>
-      <Text style={styles.subtitle}>Bet your reputation. Predict the future.</Text>
+  const { width } = useWindowDimensions();
+  const isWide = width > 800;
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Create a Poll</Text>
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>+ New Poll</Text>
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.logoSection}>
+          <Text style={styles.logo}>🎲 BetSocial</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <View style={styles.balanceBox}>
+            <Text style={styles.balanceText}>💰 $1,250</Text>
+          </View>
+          <View style={styles.profileCircle}>
+            <Text style={styles.profileInitial}>U</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Navigation Tabs */}
+      <View style={styles.navTabs}>
+        <TouchableOpacity style={styles.activeTab}>
+          <Text style={styles.activeTabText}>🏠 Feed</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.inactiveTab}>
+          <Text style={styles.inactiveTabText}>👤 Profile</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Your Stats</Text>
-        <Text style={styles.text}>Active Bets: 3</Text>
-        <Text style={styles.text}>Clout: 💰 450</Text>
-        <Text style={styles.text}>Win Rate: 68%</Text>
-      </View>
+      {/* Main Layout */}
+      <View style={[styles.mainLayout, isWide && styles.rowLayout]}>
+        {/* Sidebar */}
+        <View style={[styles.sidebar, isWide && styles.sidebarWide]}>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Create a Poll</Text>
+            <TouchableOpacity style={styles.newPollButton}>
+              <Text style={styles.newPollText}>+ New Poll</Text>
+            </TouchableOpacity>
+          </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Trending Topics</Text>
-        <Text style={styles.text}>#TechStocks (234 bets)</Text>
-        <Text style={styles.text}>#SportsPredict (189 bets)</Text>
-        <Text style={styles.text}>#WeatherBets (156 bets)</Text>
-      </View>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Your Stats</Text>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Active Bets</Text>
+              <Text style={styles.statValue}>3</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Total Winnings</Text>
+              <Text style={styles.statValue}>/C/450</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Win Rate</Text>
+              <Text style={styles.statValue}>68%</Text>
+            </View>
+          </View>
 
-      <Text style={styles.footer}>More features coming soon 🚀</Text>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Trending Topics</Text>
+            <View style={styles.trendingRow}>
+              <Text style={styles.link}>#TechStocks</Text>
+              <Text style={styles.trendingCount}>234 bets</Text>
+            </View>
+            <View style={styles.trendingRow}>
+              <Text style={styles.link}>#SportsPredict</Text>
+              <Text style={styles.trendingCount}>189 bets</Text>
+            </View>
+            <View style={styles.trendingRow}>
+              <Text style={styles.link}>#WeatherBets</Text>
+              <Text style={styles.trendingCount}>156 bets</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Feed */}
+        <View style={[styles.feed, isWide && styles.feedWide]}>
+          {/* First Poll Card */}
+          <View style={styles.postCard}>
+            <View style={styles.postHeader}>
+              <View style={styles.userInfo}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>SC</Text>
+                </View>
+                <View>
+                  <Text style={styles.username}>Sarah Chen</Text>
+                  <Text style={styles.handle}>@sarahc_tech · 2h ago</Text>
+                </View>
+              </View>
+              <TouchableOpacity>
+                <Text style={styles.moreButton}>⋯</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.pollQuestion}>Will Bitcoin reach $70,000 by the end of this month? 🚀</Text>
+
+            <View style={styles.pollOption}>
+              <View style={styles.optionContent}>
+                <Text style={styles.optionText}>Yes, it will!</Text>
+                <Text style={styles.optionPercent}>63%</Text>
+              </View>
+              <View style={[styles.progressBar, { width: '63%' }]} />
+              <Text style={styles.betAmount}>$2,463 bet</Text>
+            </View>
+
+            <View style={styles.pollOption}>
+              <View style={styles.optionContent}>
+                <Text style={styles.optionText}>No way</Text>
+                <Text style={styles.optionPercent}>37%</Text>
+              </View>
+              <View style={[styles.progressBar, { width: '37%' }]} />
+              <Text style={styles.betAmount}>$1,434 bet</Text>
+            </View>
+
+            <View style={styles.betSection}>
+              <TextInput 
+                style={styles.betInput}
+                placeholder="Bet amount"
+                placeholderTextColor="#999"
+              />
+              <TouchableOpacity style={styles.yesButton}>
+                <Text style={styles.buttonText}>Bet YES</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.noButton}>
+                <Text style={styles.buttonText}>Bet NO</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.potentialPayout}>Potential payout: $0</Text>
+
+            <View style={styles.postFooter}>
+              <View style={styles.footerItem}>
+                <Text style={styles.footerIcon}>❤️</Text>
+                <Text style={styles.footerCount}>45</Text>
+              </View>
+              <View style={styles.footerItem}>
+                <Text style={styles.footerIcon}>💬</Text>
+                <Text style={styles.footerCount}>12</Text>
+              </View>
+              <View style={styles.footerItem}>
+                <Text style={styles.footerIcon}>🔄</Text>
+                <Text style={styles.footerCount}>8</Text>
+              </View>
+              <Text style={styles.totalPool}>Total Pool: $3,897</Text>
+            </View>
+          </View>
+
+          {/* Second Poll Card */}
+          <View style={styles.postCard}>
+            <View style={styles.postHeader}>
+              <View style={styles.userInfo}>
+                <View style={[styles.avatar, styles.avatarOrange]}>
+                  <Text style={styles.avatarText}>MR</Text>
+                </View>
+                <View>
+                  <Text style={styles.username}>Mike Rodriguez</Text>
+                  <Text style={styles.handle}>@mike_sports · 4h ago</Text>
+                </View>
+              </View>
+              <TouchableOpacity>
+                <Text style={styles.moreButton}>⋯</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.pollQuestion}>Superbowl this year? 🏈</Text>
+          </View>
+        </View>
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ECE9FF',
+    flex: 1,
+    backgroundColor: '#7C6FD8',
+  },
+  content: {
+    padding: 0,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 50,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#fff',
   },
-  title: {
-    fontSize: 26,
+  logoSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logo: {
+    color: '#7C6FD8',
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#4B3EFF',
-    marginBottom: 6,
   },
-  subtitle: {
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  balanceBox: {
+    backgroundColor: '#FFA500',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  balanceText: {
+    fontWeight: 'bold',
+    color: '#fff',
+    fontSize: 14,
+  },
+  profileCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#667',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileInitial: {
+    color: '#fff',
+    fontWeight: 'bold',
     fontSize: 16,
-    color: '#555',
+  },
+  navTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    gap: 8,
+    paddingBottom: 8,
+  },
+  activeTab: {
+    backgroundColor: '#7C6FD8',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+  },
+  activeTabText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  inactiveTab: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  inactiveTabText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  mainLayout: {
+    flexDirection: 'column',
+    padding: 16,
+  },
+  rowLayout: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  sidebar: {
+    flex: 1,
     marginBottom: 20,
+  },
+  sidebarWide: {
+    width: '28%',
+    marginRight: 16,
+  },
+  feed: {
+    flex: 1,
+  },
+  feedWide: {
+    width: '70%',
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    width: '90%',
+    borderRadius: 16,
     padding: 20,
-    marginBottom: 15,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
+    fontWeight: 'bold',
+    marginBottom: 16,
     color: '#333',
   },
-  text: {
-    fontSize: 15,
-    color: '#444',
-    marginBottom: 4,
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  button: {
-    backgroundColor: '#6B4EFF',
-    padding: 10,
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#7C6FD8',
+  },
+  newPollButton: {
+    backgroundColor: '#7C6FD8',
+    padding: 12,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 8,
+  },
+  newPollText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  trendingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  link: {
+    color: '#7C6FD8',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  trendingCount: {
+    color: '#999',
+    fontSize: 13,
+  },
+  postCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  postHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#B8B8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarOrange: {
+    backgroundColor: '#FFB366',
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  username: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    color: '#333',
+  },
+  handle: {
+    color: '#999',
+    fontSize: 13,
+  },
+  moreButton: {
+    fontSize: 20,
+    color: '#999',
+  },
+  pollQuestion: {
+    fontSize: 16,
+    marginBottom: 16,
+    color: '#333',
+    lineHeight: 22,
+  },
+  pollOption: {
+    marginBottom: 12,
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 8,
+    position: 'relative',
+  },
+  optionContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  optionText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  optionPercent: {
+    fontWeight: 'bold',
+    color: '#7C6FD8',
+    fontSize: 14,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: '#7C6FD8',
+    borderRadius: 3,
+    marginBottom: 6,
+  },
+  betAmount: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'right',
+  },
+  betSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+    gap: 8,
+  },
+  betInput: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+    padding: 10,
+    borderRadius: 8,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  yesButton: {
+    backgroundColor: '#2ecc71',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  noButton: {
+    backgroundColor: '#e74c3c',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
   },
   buttonText: {
-    color: 'white',
-    fontWeight: '600',
-  },
-  footer: {
-    marginTop: 30,
+    color: '#fff',
+    fontWeight: 'bold',
     fontSize: 14,
-    color: '#777',
+  },
+  potentialPayout: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 12,
+  },
+  postFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  footerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  footerIcon: {
+    fontSize: 16,
+  },
+  footerCount: {
+    fontSize: 13,
+    color: '#666',
+  },
+  totalPool: {
+    marginLeft: 'auto',
+    color: '#2ecc71',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
