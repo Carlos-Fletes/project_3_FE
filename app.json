@@ -36,7 +36,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/06116d5c-c203-45d3-830d-0f18adf9fb1b"
+      "url": "https://u.expo.dev/your-project-id"
     },
     "extra": {
       "eas": {
