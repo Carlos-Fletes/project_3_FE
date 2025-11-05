@@ -29,8 +29,8 @@ function SignInScreen({ navigation }: any) {
     webClientId:
       '127612041741-30t2l6pgdt18ij22gvvr03r1kf4org0h.apps.googleusercontent.com',
     redirectUri: makeRedirectUri({
-      scheme: 'project3fe', // must match scheme in app.json
-    }),
+  scheme: 'com.cfletes.project3fe',
+}),
   });
 
   useEffect(() => {
