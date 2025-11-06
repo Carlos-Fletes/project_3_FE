@@ -3,9 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensio
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-// Add this type definition
 type RootStackParamList = {
-  Login: undefined;
+  SignIn: undefined; // Make sure it matches your App.tsx stack
   Home: undefined;
   Profile: undefined;
 };
