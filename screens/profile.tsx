@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RootStackParamList = {
+  SignIn: undefined; // Make sure this matches your App.tsx
   Home: undefined;
   Profile: undefined;
-  Login: undefined;
 };
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<
@@ -14,8 +15,42 @@ type ProfileScreenNavigationProp = NativeStackNavigationProp<
   'Profile'
 >;
 
+type User = {
+  name: string;
+  username: string;
+};
+
 export default function Profile() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
+  const [user, setUser] = useState<User | null>(null);
+
+  // Load user info from AsyncStorage when screen mounts
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem('@user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        console.log('Error fetching user info:', error);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('@user'); // Clear stored user info
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'SignIn' }], // Go back to SignIn screen
+      });
+    } catch (error) {
+      console.log('Error logging out:', error);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -29,8 +64,8 @@ export default function Profile() {
       />
 
       {/* Username and Info */}
-      <Text style={styles.name}>John Doe</Text>
-      <Text style={styles.username}>@johndoe</Text>
+      <Text style={styles.name}>{user?.name || 'John Doe'}</Text>
+      <Text style={styles.username}>{user?.username || '@johndoe'}</Text>
 
       {/* Stats */}
       <View style={styles.statsCard}>
@@ -49,7 +84,7 @@ export default function Profile() {
 
       <TouchableOpacity
         style={[styles.button, styles.logoutButton]}
-        onPress={() => navigation.navigate('Login')}
+        onPress={handleLogout} // Logout clears session and resets stack
       >
         <Text style={styles.buttonText}>Log Out</Text>
       </TouchableOpacity>

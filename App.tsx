@@ -8,12 +8,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Home from './screens/home';
+import Profile from './screens/Profile';
 
 WebBrowser.maybeCompleteAuthSession();
 
 type RootStackParamList = {
   SignIn: undefined;
   Home: undefined;
+  Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -29,8 +31,8 @@ function SignInScreen({ navigation }: any) {
     webClientId:
       '127612041741-30t2l6pgdt18ij22gvvr03r1kf4org0h.apps.googleusercontent.com',
     redirectUri: makeRedirectUri({
-  scheme: 'com.cfletes.project3fe',
-}),
+      scheme: 'com.cfletes.project3fe',
+    }),
   });
 
   useEffect(() => {
@@ -63,16 +65,10 @@ function SignInScreen({ navigation }: any) {
     }
   };
 
-  const handleSignOut = async () => {
-    await AsyncStorage.removeItem('@user');
-    setUserInfo(null);
-  };
-
   return (
     <View style={styles.container}>
-      <Text>{userInfo ? `Hello, ${userInfo.name}` : 'Not signed in'}</Text>
+      
       <Button title="Sign in with Google" onPress={() => promptAsync()} />
-      <Button title="Sign out" onPress={handleSignOut} />
       <StatusBar style="auto" />
     </View>
   );
@@ -88,6 +84,7 @@ export default function App() {
           options={{ headerShown: false }}
         />
         <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen name="Profile" component={Profile} />
       </Stack.Navigator>
     </NavigationContainer>
   );
