@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Home from './screens/home';
-import Profile from './screens/Profile';
+import Profile from './screens/profile';
 
 WebBrowser.maybeCompleteAuthSession();
 
