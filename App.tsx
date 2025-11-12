@@ -9,6 +9,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Home from './screens/home';
 import Profile from './screens/profile';
+import { UserProvider, useUser } from './contexts/UserContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -21,7 +22,7 @@ type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function SignInScreen({ navigation }: any) {
-  const [userInfo, setUserInfo] = useState<any>(null);
+  const { user, login, logout, isLoading } = useUser();
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId:
@@ -44,9 +45,7 @@ function SignInScreen({ navigation }: any) {
   }, [response]);
 
   const checkStoredUser = async () => {
-    const storedUser = await AsyncStorage.getItem('@user');
-    if (storedUser) {
-      setUserInfo(JSON.parse(storedUser));
+    if (user) {
       navigation.replace('Home');
     }
   };
@@ -56,19 +55,41 @@ function SignInScreen({ navigation }: any) {
       const res = await fetch('https://www.googleapis.com/userinfo/v2/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const user = await res.json();
-      setUserInfo(user);
-      await AsyncStorage.setItem('@user', JSON.stringify(user));
+      const googleUser = await res.json();
+      
+      // Use our context to handle login (which will create/find user in API)
+      await login(googleUser);
       navigation.replace('Home');
     } catch (error) {
       console.log('Error fetching user data:', error);
     }
   };
 
+  const handleSignOut = async () => {
+    await logout();
+  };
+
+  // If user is already logged in, navigate to home
+  useEffect(() => {
+    if (user && !isLoading) {
+      navigation.replace('Home');
+    }
+  }, [user, isLoading]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading...</Text>
+        <StatusBar style="auto" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      
+      <Text>{user ? `Hello, ${user.name}` : 'Not signed in'}</Text>
       <Button title="Sign in with Google" onPress={() => promptAsync()} />
+      {user && <Button title="Sign out" onPress={handleSignOut} />}
       <StatusBar style="auto" />
     </View>
   );
@@ -76,17 +97,19 @@ function SignInScreen({ navigation }: any) {
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="SignIn">
-        <Stack.Screen
-          name="SignIn"
-          component={SignInScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen name="Home" component={Home} />
-        <Stack.Screen name="Profile" component={Profile} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <UserProvider>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName="SignIn">
+          <Stack.Screen
+            name="SignIn"
+            component={SignInScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="Home" component={Home} />
+          <Stack.Screen name="Profile" component={Profile} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </UserProvider>
   );
 }
 
