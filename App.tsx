@@ -19,6 +19,7 @@ type RootStackParamList = {
   Profile: undefined;
 };
 
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function SignInScreen({ navigation }: any) {
