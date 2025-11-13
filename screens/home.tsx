@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useUser } from '../contexts/UserContext';
 
 type RootStackParamList = {
   SignIn: undefined; // Make sure it matches your App.tsx stack
@@ -12,7 +13,8 @@ type RootStackParamList = {
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export default function Home() {
-  const navigation = useNavigation<HomeScreenNavigationProp>();  // Add this line
+  const navigation = useNavigation<HomeScreenNavigationProp>();
+  const { user } = useUser();
   const { width } = useWindowDimensions();
   const isWide = width > 800;
 
@@ -25,11 +27,15 @@ export default function Home() {
         </View>
         <View style={styles.headerRight}>
           <View style={styles.balanceBox}>
-            <Text style={styles.balanceText}>💰 $1,250</Text>
+            <Text style={styles.balanceText}>💰 {user?.obrobucks || 0} ObroBucks</Text>
           </View>
-          <View style={styles.profileCircle}>
-            <Text style={styles.profileInitial}>U</Text>
-          </View>
+          <TouchableOpacity 
+            style={styles.profileCircle}
+            onPress={() => navigation.navigate('Profile')}>
+            <Text style={styles.profileInitial}>
+              {user?.first_name?.[0] || user?.name?.[0] || 'U'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 

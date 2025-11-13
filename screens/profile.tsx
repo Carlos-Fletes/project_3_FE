@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUser } from '../contexts/UserContext';
 
 type RootStackParamList = {
   SignIn: undefined; // Make sure this matches your App.tsx
@@ -15,37 +15,16 @@ type ProfileScreenNavigationProp = NativeStackNavigationProp<
   'Profile'
 >;
 
-type User = {
-  name: string;
-  username: string;
-};
-
 export default function Profile() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
-  const [user, setUser] = useState<User | null>(null);
-
-  // Load user info from AsyncStorage when screen mounts
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const storedUser = await AsyncStorage.getItem('@user');
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-      } catch (error) {
-        console.log('Error fetching user info:', error);
-      }
-    };
-
-    fetchUser();
-  }, []);
+  const { user, logout } = useUser();
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem('@user'); // Clear stored user info
+      await logout();
       navigation.reset({
         index: 0,
-        routes: [{ name: 'SignIn' }], // Go back to SignIn screen
+        routes: [{ name: 'SignIn' }],
       });
     } catch (error) {
       console.log('Error logging out:', error);
@@ -59,17 +38,22 @@ export default function Profile() {
 
       {/* Profile Picture */}
       <Image
-        source={{ uri: 'https://cdn-icons-png.flaticon.com/512/847/847969.png' }}
+        source={{ uri: user?.profile_picture_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' }}
         style={styles.avatar}
       />
 
       {/* Username and Info */}
-      <Text style={styles.name}>{user?.name || 'John Doe'}</Text>
-      <Text style={styles.username}>{user?.username || '@johndoe'}</Text>
+      <Text style={styles.name}>{user?.name || 'Loading...'}</Text>
+      <Text style={styles.username}>@{user?.username || 'loading'}</Text>
+
+      {/* Bio */}
+      {user?.bio && (
+        <Text style={styles.bio}>{user.bio}</Text>
+      )}
 
       {/* Stats */}
       <View style={styles.statsCard}>
-        <Text style={styles.statText}>Total Clout: 1250 🪙</Text>
+        <Text style={styles.statText}>ObroBucks: {user?.obrobucks || 0} 🪙</Text>
         <Text style={styles.statText}>Win Rate: 68%</Text>
         <Text style={styles.statText}>Total Bets: 32</Text>
       </View>
@@ -120,6 +104,14 @@ const styles = StyleSheet.create({
   username: {
     color: '#777',
     marginBottom: 20,
+  },
+  bio: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    lineHeight: 20,
   },
   statsCard: {
     backgroundColor: '#fff',
