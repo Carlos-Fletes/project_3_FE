@@ -10,6 +10,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Home from './screens/home';
 import Profile from './screens/profile';
 import { UserProvider, useUser } from './contexts/UserContext';
+import EditProfile from './screens/EditProfile';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -17,6 +18,7 @@ type RootStackParamList = {
   SignIn: undefined;
   Home: undefined;
   Profile: undefined;
+  EditProfile: undefined;
 };
 
 
@@ -108,6 +110,7 @@ export default function App() {
           />
           <Stack.Screen name="Home" component={Home} />
           <Stack.Screen name="Profile" component={Profile} />
+          <Stack.Screen name="EditProfile" component={EditProfile} options={{ title: 'Edit Profile' }} />
         </Stack.Navigator>
       </NavigationContainer>
     </UserProvider>
