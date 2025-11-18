@@ -31,6 +31,7 @@ export default function EditProfile() {
   const [bio, setBio] = useState('');
   const [profilePictureUrl, setProfilePictureUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // Load user data when component mounts
   useEffect(() => {
@@ -85,8 +86,12 @@ export default function EditProfile() {
         profile_picture_url: profilePictureUrl.trim(),
       });
       
-      Alert.alert('Success', 'Profile updated successfully!');
-      navigation.goBack();
+      // Show success message
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        navigation.goBack();
+      }, 2000); // Show for 2 seconds then go back
     } catch (error) {
       console.error('Update error:', error);
       Alert.alert('Error', 'Failed to update profile. Please try again.');
@@ -99,6 +104,13 @@ export default function EditProfile() {
 
   return (
     <View style={styles.container}>
+      {/* Success Message */}
+      {showSuccess && (
+        <View style={styles.successBanner}>
+          <Text style={styles.successText}>✓ Profile updated successfully!</Text>
+        </View>
+      )}
+
       <Text style={styles.header}>Edit Profile</Text>
 
       {/* Avatar */}
@@ -273,5 +285,23 @@ const styles = StyleSheet.create({
 
   disabled: {
     opacity: 0.6,
+  },
+
+  successBanner: {
+    backgroundColor: '#10B981',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+  },
+
+  successText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
