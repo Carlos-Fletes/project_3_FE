@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '../contexts/UserContext';
 
 type RootStackParamList = {
@@ -23,11 +24,12 @@ export default function Home() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.logoSection}>
-          <Text style={styles.logo}>🎲 BetSocial</Text>
+          <Text style={styles.logo}>BetSocial</Text>
         </View>
         <View style={styles.headerRight}>
           <View style={styles.balanceBox}>
-            <Text style={styles.balanceText}>💰 {user?.obrobucks || 0} ObroBucks</Text>
+            <Ionicons name="wallet" size={14} color="#fff" style={styles.balanceIcon} />
+            <Text style={styles.balanceText}>{user?.obrobucks || 0} ObroBucks</Text>
           </View>
           <TouchableOpacity 
             style={styles.profileCircle}
@@ -42,12 +44,18 @@ export default function Home() {
       {/* Navigation Tabs */}
       <View style={styles.navTabs}>
         <TouchableOpacity style={styles.activeTab}>
-          <Text style={styles.activeTabText}>🏠 Feed</Text>
+          <View style={styles.tabContent}>
+            <Ionicons name="home" size={16} color="#fff" />
+            <Text style={styles.activeTabText}>Feed</Text>
+          </View>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.inactiveTab}
           onPress={() => navigation.navigate('Profile')}>
-          <Text style={styles.inactiveTabText}>👤 Profile</Text>
+          <View style={styles.tabContent}>
+            <Ionicons name="person" size={16} color="#666" />
+            <Text style={styles.inactiveTabText}>Profile</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -152,15 +160,15 @@ export default function Home() {
 
             <View style={styles.postFooter}>
               <View style={styles.footerItem}>
-                <Text style={styles.footerIcon}>❤️</Text>
+                <Ionicons name="heart-outline" size={18} color="#666" />
                 <Text style={styles.footerCount}>45</Text>
               </View>
               <View style={styles.footerItem}>
-                <Text style={styles.footerIcon}>💬</Text>
+                <Ionicons name="chatbubble-outline" size={18} color="#666" />
                 <Text style={styles.footerCount}>12</Text>
               </View>
               <View style={styles.footerItem}>
-                <Text style={styles.footerIcon}>🔄</Text>
+                <Ionicons name="share-outline" size={18} color="#666" />
                 <Text style={styles.footerCount}>8</Text>
               </View>
               <Text style={styles.totalPool}>Total Pool: $3,897</Text>
@@ -227,11 +235,22 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  balanceIcon: {
+    marginTop: 1,
   },
   balanceText: {
     fontWeight: 'bold',
     color: '#fff',
     fontSize: 14,
+  },
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   profileCircle: {
     width: 40,
@@ -488,10 +507,7 @@ const styles = StyleSheet.create({
   footerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  footerIcon: {
-    fontSize: 16,
+    gap: 6,
   },
   footerCount: {
     fontSize: 13,
