@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,11 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useUser } from '../contexts/UserContext';
 
 type RootStackParamList = {
   Login: undefined;
@@ -22,24 +24,75 @@ type EditNav = NativeStackNavigationProp<RootStackParamList, 'EditProfile'>;
 
 export default function EditProfile() {
   const navigation = useNavigation<EditNav>();
+  const { user, updateUser } = useUser();
 
-  // Placeholder state
-  const [username, setUsername] = useState('john_doe');
-  const [password, setPassword] = useState('');
-  const [pfpUri, setPfpUri] = useState<string>(
-    'https://cdn-icons-png.flaticon.com/512/847/847969.png'
-  );
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [bio, setBio] = useState('');
+  const [profilePictureUrl, setProfilePictureUrl] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load user data when component mounts
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setUsername(user.username || '');
+      setBio(user.bio || '');
+      setProfilePictureUrl(user.profile_picture_url || '');
+    }
+  }, [user]);
 
   const onChangePhoto = () => {
-    Alert.alert(
-      'Change Photo',
-      'Photo picker not wired yet. You can connect expo-image-picker later.'
+    Alert.prompt(
+      'Change Photo URL',
+      'Enter a new profile picture URL:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Save',
+          onPress: (url) => {
+            if (url) setProfilePictureUrl(url);
+          },
+        },
+      ],
+      'plain-text',
+      profilePictureUrl
     );
   };
 
-  const onSave = () => {
-    Alert.alert('Saved', 'Profile changes saved (local only for now).');
-    navigation.goBack();
+  const onSave = async () => {
+    if (!user) return;
+
+    // Basic validation
+    if (!name.trim() || !username.trim()) {
+      Alert.alert('Error', 'Name and username are required');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Split name into first and last for backend
+      const nameParts = name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      await updateUser({
+        name: name.trim(),
+        first_name: firstName,
+        last_name: lastName,
+        username: username.trim(),
+        bio: bio.trim(),
+        profile_picture_url: profilePictureUrl.trim(),
+      });
+      
+      Alert.alert('Success', 'Profile updated successfully!');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Update error:', error);
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const onCancel = () => navigation.goBack();
@@ -50,7 +103,7 @@ export default function EditProfile() {
 
       {/* Avatar */}
       <View style={styles.avatarRow}>
-        <Image source={{ uri: pfpUri }} style={styles.avatar} />
+        <Image source={{ uri: profilePictureUrl || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' }} style={styles.avatar} />
         <TouchableOpacity onPress={onChangePhoto} style={styles.linkButton}>
           <Text style={styles.linkText}>Change Photo</Text>
         </TouchableOpacity>
@@ -58,21 +111,40 @@ export default function EditProfile() {
 
       {/* Form */}
       <View style={styles.form}>
+        <Text style={styles.label}>Name</Text>
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          placeholder="Your full name"
+        />
+
         <Text style={styles.label}>Username</Text>
         <TextInput
           style={styles.input}
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
+          placeholder="username"
         />
 
-        <Text style={styles.label}>New Password</Text>
+        <Text style={styles.label}>Bio</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          value={bio}
+          onChangeText={setBio}
+          multiline
+          numberOfLines={3}
+          placeholder="Tell us about yourself..."
+        />
+
+        <Text style={styles.label}>Profile Picture URL</Text>
         <TextInput
           style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          placeholder="••••••••"
+          value={profilePictureUrl}
+          onChangeText={setProfilePictureUrl}
+          placeholder="https://..."
+          autoCapitalize="none"
         />
       </View>
 
@@ -82,8 +154,16 @@ export default function EditProfile() {
           <Text style={styles.btnText}>Cancel</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.btn, styles.save]} onPress={onSave}>
-          <Text style={styles.btnText}>Save Changes</Text>
+        <TouchableOpacity 
+          style={[styles.btn, styles.save, isSaving && styles.disabled]} 
+          onPress={onSave}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.btnText}>Save Changes</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -160,6 +240,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
   },
 
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+
   btnRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -184,5 +269,9 @@ const styles = StyleSheet.create({
   btnText: {
     color: '#fff',
     fontWeight: '700',
+  },
+
+  disabled: {
+    opacity: 0.6,
   },
 });

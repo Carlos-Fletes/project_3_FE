@@ -61,6 +61,13 @@ export default function Profile() {
       {/* Buttons */}
       <TouchableOpacity
         style={styles.button}
+        onPress={() => navigation.navigate('EditProfile' as any)}
+      >
+        <Text style={styles.buttonText}>Edit Profile</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.button}
         onPress={() => navigation.navigate('Home')}
       >
         <Text style={styles.buttonText}>Back to Home</Text>
