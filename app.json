@@ -2,6 +2,7 @@
   "expo": {
     "name": "Project 3 Frontend",
     "slug": "project-3-fe",
+    "owner": "Cfletes",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
