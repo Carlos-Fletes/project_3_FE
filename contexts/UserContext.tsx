@@ -143,7 +143,32 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUser = async (userData: Partial<User>) => {
-    if (!user) return;
+    if (!user) {
+      console.error('No user logged in');
+      return;
+    }
+
+    // Only send updatable fields (exclude read-only fields like id, created_at, etc.)
+    const updatePayload: any = {};
+    
+    // Updatable fields according to backend
+    const updatableFields = [
+      'name', 'first_name', 'last_name', 
+      'username', 'bio', 'obrobucks',
+      'profile_picture_url',
+      'access_token', 'refresh_token', 'token_expires_at'
+    ];
+
+    // Copy only the fields that exist in userData and are updatable
+    updatableFields.forEach(field => {
+      if (field in userData) {
+        updatePayload[field] = userData[field as keyof User];
+      }
+    });
+    
+    console.log('Updating user with ID:', user.id);
+    console.log('Update payload:', updatePayload);
+    console.log('Update payload (stringified):', JSON.stringify(updatePayload, null, 2));
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/users/${user.id}`, {
@@ -151,15 +176,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ...user, ...userData }),
+        body: JSON.stringify(updatePayload),
       });
+
+      console.log('Update response status:', response.status);
 
       if (response.ok) {
         const updatedUser = await response.json();
+        console.log('User updated successfully:', updatedUser);
         setUser(updatedUser);
         await AsyncStorage.setItem('@user', JSON.stringify(updatedUser));
       } else {
-        throw new Error('Failed to update user');
+        const errorText = await response.text();
+        console.error('Update failed:', response.status, errorText);
+        throw new Error(`Failed to update user: ${response.status} - ${errorText}`);
       }
     } catch (error) {
       console.error('Update user error:', error);
