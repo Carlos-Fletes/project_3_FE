@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '../contexts/UserContext';
 
 type RootStackParamList = {
@@ -53,12 +54,28 @@ export default function Profile() {
 
       {/* Stats */}
       <View style={styles.statsCard}>
-        <Text style={styles.statText}>ObroBucks: {user?.obrobucks || 0} 🪙</Text>
-        <Text style={styles.statText}>Win Rate: 68%</Text>
-        <Text style={styles.statText}>Total Bets: 32</Text>
+        <View style={styles.statRow}>
+          <Ionicons name="wallet" size={18} color="#5E4AE3" />
+          <Text style={styles.statText}>ObroBucks: {user?.obrobucks || 0}</Text>
+        </View>
+        <View style={styles.statRow}>
+          <Ionicons name="trending-up" size={18} color="#5E4AE3" />
+          <Text style={styles.statText}>Win Rate: 68%</Text>
+        </View>
+        <View style={styles.statRow}>
+          <Ionicons name="stats-chart" size={18} color="#5E4AE3" />
+          <Text style={styles.statText}>Total Bets: 32</Text>
+        </View>
       </View>
 
       {/* Buttons */}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate('EditProfile' as any)}
+      >
+        <Text style={styles.buttonText}>Edit Profile</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         style={styles.button}
         onPress={() => navigation.navigate('Home')}
@@ -125,9 +142,14 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
   },
+  statRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: 5,
+  },
   statText: {
     fontSize: 16,
-    marginVertical: 5,
     color: '#333',
   },
   button: {
