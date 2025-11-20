@@ -10,6 +10,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Home from './screens/home';
 import Profile from './screens/profile';
 import EditProfile from './screens/EditProfile';
+import Gambling from './screens/gambling';
 import { UserProvider, useUser } from './contexts/UserContext';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -19,6 +20,7 @@ type RootStackParamList = {
   Home: undefined;
   Profile: undefined;
   EditProfile: undefined;
+  Gambling: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -125,10 +127,31 @@ export default function App() {
     <UserProvider>
       <NavigationContainer>
         <Stack.Navigator initialRouteName="SignIn">
-          <Stack.Screen name="SignIn" component={SignInScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Home" component={Home} />
-          <Stack.Screen name="Profile" component={Profile} />
-          <Stack.Screen name="EditProfile" component={EditProfile} options={{ title: 'Edit Profile' }} />
+          <Stack.Screen
+            name="SignIn"
+            component={SignInScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Home" 
+            component={Home}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Profile" 
+            component={Profile}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="EditProfile" 
+            component={EditProfile} 
+            options={{ title: 'Edit Profile' }} 
+          />
+          <Stack.Screen 
+            name="Gambling" 
+            component={Gambling}
+            options={{ headerShown: false }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </UserProvider>
