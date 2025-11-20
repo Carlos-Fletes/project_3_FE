@@ -11,6 +11,7 @@ import Home from './screens/home';
 import Profile from './screens/profile';
 import { UserProvider, useUser } from './contexts/UserContext';
 import EditProfile from './screens/EditProfile';
+import Gambling from './screens/gambling';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -19,6 +20,7 @@ type RootStackParamList = {
   Home: undefined;
   Profile: undefined;
   EditProfile: undefined;
+  Gambling: undefined;
 };
 
 
@@ -108,9 +110,26 @@ export default function App() {
             component={SignInScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen name="Home" component={Home} />
-          <Stack.Screen name="Profile" component={Profile} />
-          <Stack.Screen name="EditProfile" component={EditProfile} options={{ title: 'Edit Profile' }} />
+          <Stack.Screen 
+            name="Home" 
+            component={Home}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Profile" 
+            component={Profile}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="EditProfile" 
+            component={EditProfile} 
+            options={{ title: 'Edit Profile' }} 
+          />
+          <Stack.Screen 
+            name="Gambling" 
+            component={Gambling}
+            options={{ headerShown: false }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </UserProvider>

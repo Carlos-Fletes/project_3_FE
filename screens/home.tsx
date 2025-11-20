@@ -5,9 +5,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useUser } from '../contexts/UserContext';
 
 type RootStackParamList = {
-  SignIn: undefined; // Make sure it matches your App.tsx stack
+  SignIn: undefined;
   Home: undefined;
   Profile: undefined;
+  Gambling: undefined;
 };
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -49,6 +50,11 @@ export default function Home() {
           onPress={() => navigation.navigate('Profile')}>
           <Text style={styles.inactiveTabText}>👤 Profile</Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.inactiveTab}
+          onPress={() => navigation.navigate('Gambling')}>
+          <Text style={styles.inactiveTabText}>🎰 Casino</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Main Layout */}
@@ -59,6 +65,15 @@ export default function Home() {
             <Text style={styles.cardTitle}>Create a Poll</Text>
             <TouchableOpacity style={styles.newPollButton}>
               <Text style={styles.newPollText}>+ New Poll</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Quick Actions</Text>
+            <TouchableOpacity 
+              style={styles.casinoButton}
+              onPress={() => navigation.navigate('Gambling')}>
+              <Text style={styles.casinoButtonText}>🎰 Visit Casino</Text>
             </TouchableOpacity>
           </View>
 
@@ -335,6 +350,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 13,
+  },
+  casinoButton: {
+    backgroundColor: '#FFA500',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  casinoButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   trendingRow: {
     flexDirection: 'row',
