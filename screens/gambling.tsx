@@ -28,8 +28,11 @@ export default function Gambling() {
   const [currentProfit, setCurrentProfit] = useState(0);
 
   const openLootBox = (cost: number, boxType: string) => {
+    console.log(`Attempting to open ${boxType} box with cost ${cost}`);
+    console.log(`User ObroBucks: ${user?.obrobucks}`);
+    
     if (!user || user.obrobucks < cost) {
-      Alert.alert('Insufficient Funds', 'You don\'t have enough ObroBucks to open this loot box!');
+      Alert.alert('Insufficient Funds', `You need ${cost} ObroBucks but only have ${user?.obrobucks || 0}!`);
       return;
     }
 
