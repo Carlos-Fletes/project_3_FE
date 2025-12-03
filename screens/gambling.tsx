@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Alert, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Alert, Image, Modal, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useUser } from '../contexts/UserContext';
@@ -29,6 +29,19 @@ export default function Gambling() {
   const [currentWinAmount, setCurrentWinAmount] = useState(0);
   const [currentProfit, setCurrentProfit] = useState(0);
 
+  // Game modals
+  const [showCoinFlipModal, setShowCoinFlipModal] = useState(false);
+  const [showDiceRollModal, setShowDiceRollModal] = useState(false);
+  const [showSlotMachineModal, setShowSlotMachineModal] = useState(false);
+
+  // Game states
+  const [betAmount, setBetAmount] = useState('100');
+  const [coinChoice, setCoinChoice] = useState<'heads' | 'tails'>('heads');
+  const [coinResult, setCoinResult] = useState<string | null>(null);
+  const [diceResult, setDiceResult] = useState<number | null>(null);
+  const [slotReels, setSlotReels] = useState<string[]>(['', '', '']);
+  const [isPlaying, setIsPlaying] = useState(false);
+
   const openLootBox = async (cost: number, boxType: string) => {
     if (!user || !user.id) {
       Alert.alert('Error', 'User not found. Please log in again.');
@@ -48,27 +61,20 @@ export default function Gambling() {
       let maxMultiplier;
       
       if (boxType === 'Bronze') {
-        // Bronze: 0x to 2.5x (lower risk, lower reward)
         maxMultiplier = 2.5;
         multiplier = Math.random() * maxMultiplier;
       } else if (boxType === 'Silver') {
-        // Silver: 0x to 3.5x (medium risk, medium reward)
         maxMultiplier = 3.5;
         multiplier = Math.random() * maxMultiplier;
       } else if (boxType === 'Gold') {
-        // Gold: 0x to 5x (high risk, high reward)
         maxMultiplier = 5.0;
         multiplier = Math.random() * maxMultiplier;
       } else {
-        // Default fallback
         multiplier = Math.random() * 3.0;
       }
       
       const winAmount = Math.round(cost * multiplier);
       
-      console.log('Opening loot box:', { userId: user.id, cost, winAmount, multiplier, boxType });
-      
-      // Call backend API
       const response = await fetch(`${API_URL}/api/gambling/open-lootbox`, {
         method: 'POST',
         headers: {
@@ -82,20 +88,15 @@ export default function Gambling() {
       });
 
       const data = await response.json();
-      console.log('API Response:', data);
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to open loot box');
       }
 
-      // Update local state
       const profit = data.profit;
       setLastWin(profit);
-
-      // Refresh user data to get updated balance
       await refreshUser();
 
-      // Show result with better messaging
       if (winAmount === 0) {
         Alert.alert(
           '💔 Total Loss!',
@@ -121,20 +122,204 @@ export default function Gambling() {
     }
   };
 
-  const playCoinFlip = () => {
-    Alert.alert(
-      'Coin Flip',
-      'Coming soon! This feature is under development.',
-      [{ text: 'OK' }]
-    );
+  const playCoinFlip = async () => {
+    if (!user || !user.id) {
+      Alert.alert('Error', 'Please log in to play.');
+      return;
+    }
+
+    const bet = parseInt(betAmount);
+    if (isNaN(bet) || bet <= 0) {
+      Alert.alert('Invalid Bet', 'Please enter a valid bet amount.');
+      return;
+    }
+
+    if ((user.obrobucks || 0) < bet) {
+      Alert.alert('Insufficient Funds', `You need ${bet} ObroBucks but only have ${user.obrobucks || 0}.`);
+      return;
+    }
+
+    setIsPlaying(true);
+    setCoinResult(null);
+
+    try {
+      const response = await fetch(`${API_URL}/api/gambling/coin-flip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          betAmount: bet,
+          choice: coinChoice
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to play coin flip');
+      }
+
+      // Animate the flip
+      setTimeout(() => {
+        setCoinResult(data.result);
+        setLastWin(data.profit);
+        refreshUser();
+        
+        setTimeout(() => {
+          Alert.alert(
+            data.won ? '🎉 You Won!' : '😢 You Lost!',
+            `The coin landed on: ${data.result.toUpperCase()}\n\nBet: ${bet} ObroBucks\nWon: ${data.winAmount} ObroBucks\nProfit: ${data.profit > 0 ? '+' : ''}${data.profit} ObroBucks\n\nNew balance: ${data.newBalance} ObroBucks`
+          );
+          setShowCoinFlipModal(false);
+          setCoinResult(null);
+        }, 1500);
+      }, 1000);
+
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to play coin flip.');
+    } finally {
+      setIsPlaying(false);
+    }
   };
 
-  const playDiceRoll = () => {
-    Alert.alert(
-      'Dice Roll',
-      'Coming soon! This feature is under development.',
-      [{ text: 'OK' }]
-    );
+  const playDiceRoll = async () => {
+    if (!user || !user.id) {
+      Alert.alert('Error', 'Please log in to play.');
+      return;
+    }
+
+    const bet = parseInt(betAmount);
+    if (isNaN(bet) || bet <= 0) {
+      Alert.alert('Invalid Bet', 'Please enter a valid bet amount.');
+      return;
+    }
+
+    if ((user.obrobucks || 0) < bet) {
+      Alert.alert('Insufficient Funds', `You need ${bet} ObroBucks but only have ${user.obrobucks || 0}.`);
+      return;
+    }
+
+    setIsPlaying(true);
+    setDiceResult(null);
+
+    try {
+      const response = await fetch(`${API_URL}/api/gambling/dice-roll`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          betAmount: bet
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to play dice roll');
+      }
+
+      // Animate the roll
+      setTimeout(() => {
+        setDiceResult(data.diceResult);
+        setLastWin(data.profit);
+        refreshUser();
+        
+        setTimeout(() => {
+          Alert.alert(
+            data.won ? '🎉 You Won!' : '😢 You Lost!',
+            `You rolled a: ${data.diceResult}\n${data.won ? 'Win on 4-6!' : 'Need 4-6 to win'}\n\nBet: ${bet} ObroBucks\nWon: ${data.winAmount} ObroBucks\nProfit: ${data.profit > 0 ? '+' : ''}${data.profit} ObroBucks\n\nNew balance: ${data.newBalance} ObroBucks`
+          );
+          setShowDiceRollModal(false);
+          setDiceResult(null);
+        }, 1500);
+      }, 1000);
+
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to play dice roll.');
+    } finally {
+      setIsPlaying(false);
+    }
+  };
+
+  const playSlotMachine = async () => {
+    if (!user || !user.id) {
+      Alert.alert('Error', 'Please log in to play.');
+      return;
+    }
+
+    const bet = parseInt(betAmount);
+    if (isNaN(bet) || bet <= 0) {
+      Alert.alert('Invalid Bet', 'Please enter a valid bet amount.');
+      return;
+    }
+
+    if ((user.obrobucks || 0) < bet) {
+      Alert.alert('Insufficient Funds', `You need ${bet} ObroBucks but only have ${user.obrobucks || 0}.`);
+      return;
+    }
+
+    setIsPlaying(true);
+    setSlotReels(['?', '?', '?']);
+
+    try {
+      const response = await fetch(`${API_URL}/api/gambling/slot-machine`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          betAmount: bet
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to play slot machine');
+      }
+
+      // Animate the spin
+      setTimeout(() => {
+        const symbolEmojis: {[key: string]: string} = {
+          'cherry': '🍒',
+          'lemon': '🍋',
+          'orange': '🍊',
+          'diamond': '💎',
+          'seven': '7️⃣'
+        };
+        
+        const reelSymbols = data.reels.map((symbol: string) => symbolEmojis[symbol] || '❓');
+        setSlotReels(reelSymbols);
+        setLastWin(data.profit);
+        refreshUser();
+        
+        setTimeout(() => {
+          let resultMessage = '';
+          if (data.resultType === 'jackpot') {
+            resultMessage = '🎰 JACKPOT! 777!';
+          } else if (data.resultType === 'big_win') {
+            resultMessage = '💎 BIG WIN! Triple Diamonds!';
+          } else if (data.resultType === 'triple_match') {
+            resultMessage = '🎉 Triple Match!';
+          } else if (data.resultType === 'double_match') {
+            resultMessage = '👍 Double Match!';
+          } else {
+            resultMessage = '😢 No Match';
+          }
+
+          Alert.alert(
+            resultMessage,
+            `${reelSymbols.join(' ')}\n\nMultiplier: ${data.multiplier}x\nBet: ${bet} ObroBucks\nWon: ${data.winAmount} ObroBucks\nProfit: ${data.profit > 0 ? '+' : ''}${data.profit} ObroBucks\n\nNew balance: ${data.newBalance} ObroBucks`
+          );
+          setShowSlotMachineModal(false);
+          setSlotReels(['', '', '']);
+        }, 1500);
+      }, 1500);
+
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to play slot machine.');
+    } finally {
+      setIsPlaying(false);
+    }
   };
 
   return (
@@ -237,35 +422,32 @@ export default function Gambling() {
           
           <View style={[styles.gamesContainer, isWide && styles.gamesContainerWide]}>
             {/* Coin Flip */}
-            <TouchableOpacity style={styles.gameCard} onPress={playCoinFlip}>
+            <TouchableOpacity style={styles.gameCard} onPress={() => setShowCoinFlipModal(true)}>
               <Text style={styles.gameEmoji}>🪙</Text>
               <Text style={styles.gameTitle}>Coin Flip</Text>
               <Text style={styles.gameDescription}>Double or nothing!</Text>
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonText}>Coming Soon</Text>
+              <View style={styles.playBadge}>
+                <Text style={styles.playText}>Play Now</Text>
               </View>
             </TouchableOpacity>
 
             {/* Dice Roll */}
-            <TouchableOpacity style={styles.gameCard} onPress={playDiceRoll}>
+            <TouchableOpacity style={styles.gameCard} onPress={() => setShowDiceRollModal(true)}>
               <Text style={styles.gameEmoji}>🎲</Text>
               <Text style={styles.gameTitle}>Dice Roll</Text>
-              <Text style={styles.gameDescription}>Roll high to win big!</Text>
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonText}>Coming Soon</Text>
+              <Text style={styles.gameDescription}>Roll 4-6 to win!</Text>
+              <View style={styles.playBadge}>
+                <Text style={styles.playText}>Play Now</Text>
               </View>
             </TouchableOpacity>
 
             {/* Slots */}
-            <TouchableOpacity 
-              style={styles.gameCard} 
-              onPress={() => Alert.alert('Slots', 'Coming soon!')}
-            >
+            <TouchableOpacity style={styles.gameCard} onPress={() => setShowSlotMachineModal(true)}>
               <Text style={styles.gameEmoji}>🎰</Text>
               <Text style={styles.gameTitle}>Slot Machine</Text>
-              <Text style={styles.gameDescription}>Spin to win jackpots!</Text>
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonText}>Coming Soon</Text>
+              <Text style={styles.gameDescription}>Match symbols to win!</Text>
+              <View style={styles.playBadge}>
+                <Text style={styles.playText}>Play Now</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -275,13 +457,16 @@ export default function Gambling() {
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>ℹ️ How It Works</Text>
           <Text style={styles.infoText}>
-            • Open loot boxes for a chance to multiply your ObroBucks
+            • Loot boxes: Random multiplier (0x-5x based on tier)
           </Text>
           <Text style={styles.infoText}>
-            • Each box has different risk/reward ratios
+            • Coin Flip: 50/50 chance to double your bet
           </Text>
           <Text style={styles.infoText}>
-            • More games coming soon!
+            • Dice Roll: Roll 4-6 to double your bet
+          </Text>
+          <Text style={styles.infoText}>
+            • Slot Machine: Match symbols for big multipliers
           </Text>
           <Text style={styles.warningText}>
             ⚠️ Gamble responsibly! This is just for fun.
@@ -289,56 +474,155 @@ export default function Gambling() {
         </View>
       </View>
 
-      {/* Reward Modal */}
+      {/* Coin Flip Modal */}
       <Modal
-        visible={showRewardModal}
+        visible={showCoinFlipModal}
         transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowRewardModal(false)}
+        animationType="slide"
+        onRequestClose={() => setShowCoinFlipModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {currentReward && (
-              <>
-                <Text style={styles.modalTitle}>
-                  {currentProfit > 0 ? '🎉 Congratulations!' : '😢 Better luck next time!'}
-                </Text>
-                
-                {/* Fent Image */}
-                <View style={[styles.fentImageContainer, { borderColor: getRarityColor(currentReward.rarity) }]}>
-                  <Image 
-                    source={currentReward.imageSource} 
-                    style={styles.fentImage}
-                    resizeMode="contain"
-                  />
-                </View>
-                
-                {/* Rarity Badge */}
-                <View style={[styles.rarityBadge, { backgroundColor: getRarityColor(currentReward.rarity) }]}>
-                  <Text style={styles.rarityText}>{currentReward.rarity} (Tier {currentReward.tier})</Text>
-                </View>
-                
-                {/* Message */}
-                <Text style={styles.rewardMessage}>{currentReward.message}</Text>
-                
-                {/* Winnings Info */}
-                <View style={styles.winningsInfo}>
-                  <Text style={styles.winningsLabel}>You won:</Text>
-                  <Text style={styles.winningsAmount}>{currentWinAmount} ObroBucks</Text>
-                  <Text style={[styles.profitText, currentProfit > 0 ? styles.profitPositive : styles.profitNegative]}>
-                    {currentProfit > 0 ? '+' : ''}{currentProfit} ObroBucks
-                  </Text>
-                </View>
-                
-                {/* Close Button */}
-                <TouchableOpacity 
-                  style={styles.closeButton}
-                  onPress={() => setShowRewardModal(false)}
-                >
-                  <Text style={styles.closeButtonText}>Awesome!</Text>
-                </TouchableOpacity>
-              </>
+          <View style={styles.gameModalContent}>
+            <Text style={styles.gameModalTitle}>🪙 Coin Flip</Text>
+            <Text style={styles.gameModalSubtitle}>Choose heads or tails, then flip!</Text>
+            
+            {coinResult && (
+              <View style={styles.coinDisplay}>
+                <Text style={styles.coinResultText}>{coinResult.toUpperCase()}</Text>
+              </View>
             )}
+            
+            <View style={styles.choiceContainer}>
+              <TouchableOpacity
+                style={[styles.choiceButton, coinChoice === 'heads' && styles.choiceButtonSelected]}
+                onPress={() => setCoinChoice('heads')}
+              >
+                <Text style={styles.choiceButtonText}>HEADS</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.choiceButton, coinChoice === 'tails' && styles.choiceButtonSelected]}
+                onPress={() => setCoinChoice('tails')}
+              >
+                <Text style={styles.choiceButtonText}>TAILS</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <TextInput
+              style={styles.betInput}
+              placeholder="Bet Amount"
+              keyboardType="numeric"
+              value={betAmount}
+              onChangeText={setBetAmount}
+            />
+            
+            <TouchableOpacity
+              style={[styles.playButton, isPlaying && styles.buttonDisabled]}
+              onPress={playCoinFlip}
+              disabled={isPlaying}
+            >
+              <Text style={styles.playButtonText}>{isPlaying ? 'Flipping...' : 'Flip Coin'}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowCoinFlipModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Dice Roll Modal */}
+      <Modal
+        visible={showDiceRollModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowDiceRollModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.gameModalContent}>
+            <Text style={styles.gameModalTitle}>🎲 Dice Roll</Text>
+            <Text style={styles.gameModalSubtitle}>Roll 4, 5, or 6 to win!</Text>
+            
+            {diceResult && (
+              <View style={styles.diceDisplay}>
+                <Text style={styles.diceResultText}>{diceResult}</Text>
+              </View>
+            )}
+            
+            <TextInput
+              style={styles.betInput}
+              placeholder="Bet Amount"
+              keyboardType="numeric"
+              value={betAmount}
+              onChangeText={setBetAmount}
+            />
+            
+            <TouchableOpacity
+              style={[styles.playButton, isPlaying && styles.buttonDisabled]}
+              onPress={playDiceRoll}
+              disabled={isPlaying}
+            >
+              <Text style={styles.playButtonText}>{isPlaying ? 'Rolling...' : 'Roll Dice'}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowDiceRollModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Slot Machine Modal */}
+      <Modal
+        visible={showSlotMachineModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowSlotMachineModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.gameModalContent}>
+            <Text style={styles.gameModalTitle}>🎰 Slot Machine</Text>
+            <Text style={styles.gameModalSubtitle}>Match 3 for big wins!</Text>
+            
+            <View style={styles.slotDisplay}>
+              <View style={styles.slotReel}>
+                <Text style={styles.slotSymbol}>{slotReels[0] || '❓'}</Text>
+              </View>
+              <View style={styles.slotReel}>
+                <Text style={styles.slotSymbol}>{slotReels[1] || '❓'}</Text>
+              </View>
+              <View style={styles.slotReel}>
+                <Text style={styles.slotSymbol}>{slotReels[2] || '❓'}</Text>
+              </View>
+            </View>
+            
+            <TextInput
+              style={styles.betInput}
+              placeholder="Bet Amount"
+              keyboardType="numeric"
+              value={betAmount}
+              onChangeText={setBetAmount}
+            />
+            
+            <TouchableOpacity
+              style={[styles.playButton, isPlaying && styles.buttonDisabled]}
+              onPress={playSlotMachine}
+              disabled={isPlaying}
+            >
+              <Text style={styles.playButtonText}>{isPlaying ? 'Spinning...' : 'Spin!'}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowSlotMachineModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -548,13 +832,13 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 12,
   },
-  comingSoonBadge: {
-    backgroundColor: '#7C6FD8',
+  playBadge: {
+    backgroundColor: '#2ecc71',
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 12,
   },
-  comingSoonText: {
+  playText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
@@ -593,99 +877,125 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  modalContent: {
+  gameModalContent: {
     backgroundColor: '#fff',
     borderRadius: 24,
     padding: 32,
     alignItems: 'center',
     maxWidth: 400,
     width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
   },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  fentImageContainer: {
-    width: 280,
-    height: 280,
-    borderRadius: 16,
-    borderWidth: 4,
-    padding: 8,
-    backgroundColor: '#f8f9fa',
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  fentImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
-  },
-  rarityBadge: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    marginBottom: 12,
-  },
-  rarityText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  rewardMessage: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
-    fontStyle: 'italic',
-  },
-  winningsInfo: {
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    width: '100%',
-  },
-  winningsLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  winningsAmount: {
+  gameModalTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 8,
   },
-  profitText: {
-    fontSize: 18,
+  gameModalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  coinDisplay: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#FFD700',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  coinResultText: {
+    fontSize: 20,
     fontWeight: 'bold',
+    color: '#333',
   },
-  profitPositive: {
-    color: '#2ecc71',
-  },
-  profitNegative: {
-    color: '#e74c3c',
-  },
-  closeButton: {
-    backgroundColor: '#7C6FD8',
-    paddingVertical: 14,
-    paddingHorizontal: 48,
+  diceDisplay: {
+    width: 120,
+    height: 120,
     borderRadius: 12,
-    width: '100%',
+    backgroundColor: '#fff',
+    borderWidth: 3,
+    borderColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  diceResultText: {
+    fontSize: 64,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  slotDisplay: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  slotReel: {
+    width: 80,
+    height: 100,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 3,
+    borderColor: '#7C6FD8',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  closeButtonText: {
+  slotSymbol: {
+    fontSize: 48,
+  },
+  choiceContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  choiceButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    backgroundColor: '#e0e0e0',
+    alignItems: 'center',
+  },
+  choiceButtonSelected: {
+    backgroundColor: '#7C6FD8',
+  },
+  choiceButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  betInput: {
+    width: '100%',
+    borderWidth: 2,
+    borderColor: '#7C6FD8',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  playButton: {
+    width: '100%',
+    backgroundColor: '#2ecc71',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  playButtonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  cancelButton: {
+    width: '100%',
+    paddingVertical: 12,
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
