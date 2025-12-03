@@ -39,11 +39,29 @@ export default function Gambling() {
     setIsOpening(true);
     
     try {
-      // Calculate win amount (0.5x to 3x the cost)
-      const multiplier = Math.random() * 2.5 + 0.5;
+      let multiplier;
+      let maxMultiplier;
+      
+      if (boxType === 'Bronze') {
+        // Bronze: 0x to 2.5x (lower risk, lower reward)
+        maxMultiplier = 2.5;
+        multiplier = Math.random() * maxMultiplier;
+      } else if (boxType === 'Silver') {
+        // Silver: 0x to 3.5x (medium risk, medium reward)
+        maxMultiplier = 3.5;
+        multiplier = Math.random() * maxMultiplier;
+      } else if (boxType === 'Gold') {
+        // Gold: 0x to 5x (high risk, high reward)
+        maxMultiplier = 5.0;
+        multiplier = Math.random() * maxMultiplier;
+      } else {
+        // Default fallback
+        multiplier = Math.random() * 3.0;
+      }
+      
       const winAmount = Math.round(cost * multiplier);
       
-      console.log('Opening loot box:', { userId: user.id, cost, winAmount });
+      console.log('Opening loot box:', { userId: user.id, cost, winAmount, multiplier, boxType });
       
       // Call backend API
       const response = await fetch(`${API_URL}/api/gambling/open-lootbox`, {
@@ -72,16 +90,21 @@ export default function Gambling() {
       // Refresh user data to get updated balance
       await refreshUser();
 
-      // Show result
-      if (profit > 0) {
+      // Show result with better messaging
+      if (winAmount === 0) {
+        Alert.alert(
+          '💔 Total Loss!',
+          `You lost everything!\nCost: ${cost} ObroBucks\nWon: 0 ObroBucks\n\nNew balance: ${data.newBalance} ObroBucks`
+        );
+      } else if (profit > 0) {
         Alert.alert(
           '🎉 Winner!',
-          `You won ${winAmount} ObroBucks!\nProfit: +${profit} ObroBucks\n\nNew balance: ${data.newBalance} ObroBucks`
+          `You won ${winAmount} ObroBucks!\nCost: ${cost} ObroBucks\nProfit: +${profit} ObroBucks\n\nNew balance: ${data.newBalance} ObroBucks`
         );
       } else {
         Alert.alert(
           '😢 Better luck next time!',
-          `You won ${winAmount} ObroBucks.\nLoss: ${profit} ObroBucks\n\nNew balance: ${data.newBalance} ObroBucks`
+          `You won ${winAmount} ObroBucks.\nCost: ${cost} ObroBucks\nLoss: ${profit} ObroBucks\n\nNew balance: ${data.newBalance} ObroBucks`
         );
       }
       
@@ -150,7 +173,7 @@ export default function Gambling() {
                 <Text style={styles.boxEmoji}>📦</Text>
               </View>
               <Text style={styles.boxTitle}>Bronze Box</Text>
-              <Text style={styles.boxDescription}>Win 50-150 ObroBucks</Text>
+              <Text style={styles.boxDescription}>Win 0-250 ObroBucks</Text>
               <Text style={styles.boxCost}>Cost: 100 ObroBucks</Text>
               <TouchableOpacity
                 style={[styles.openButton, styles.bronzeButton, isOpening && styles.buttonDisabled]}
@@ -169,7 +192,7 @@ export default function Gambling() {
                 <Text style={styles.boxEmoji}>📦</Text>
               </View>
               <Text style={styles.boxTitle}>Silver Box</Text>
-              <Text style={styles.boxDescription}>Win 125-375 ObroBucks</Text>
+              <Text style={styles.boxDescription}>Win 0-875 ObroBucks</Text>
               <Text style={styles.boxCost}>Cost: 250 ObroBucks</Text>
               <TouchableOpacity
                 style={[styles.openButton, styles.silverButton, isOpening && styles.buttonDisabled]}
@@ -188,7 +211,7 @@ export default function Gambling() {
                 <Text style={styles.boxEmoji}>📦</Text>
               </View>
               <Text style={styles.boxTitle}>Gold Box</Text>
-              <Text style={styles.boxDescription}>Win 250-750 ObroBucks</Text>
+              <Text style={styles.boxDescription}>Win 0-2,500 ObroBucks</Text>
               <Text style={styles.boxCost}>Cost: 500 ObroBucks</Text>
               <TouchableOpacity
                 style={[styles.openButton, styles.goldButton, isOpening && styles.buttonDisabled]}
