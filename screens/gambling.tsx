@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Alert, Image, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Alert, Modal, TextInput, LinearGradient } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useUser } from '../contexts/UserContext';
-import { getFentReward, getRarityColor, type FentReward } from '../utils/fentRarity';
 
 type RootStackParamList = {
   SignIn: undefined;
@@ -24,10 +23,6 @@ export default function Gambling() {
 
   const [isOpening, setIsOpening] = useState(false);
   const [lastWin, setLastWin] = useState<number | null>(null);
-  const [showRewardModal, setShowRewardModal] = useState(false);
-  const [currentReward, setCurrentReward] = useState<FentReward | null>(null);
-  const [currentWinAmount, setCurrentWinAmount] = useState(0);
-  const [currentProfit, setCurrentProfit] = useState(0);
 
   // Game modals
   const [showCoinFlipModal, setShowCoinFlipModal] = useState(false);
@@ -159,7 +154,6 @@ export default function Gambling() {
         throw new Error(data.error || 'Failed to play coin flip');
       }
 
-      // Animate the flip
       setTimeout(() => {
         setCoinResult(data.result);
         setLastWin(data.profit);
@@ -218,7 +212,6 @@ export default function Gambling() {
         throw new Error(data.error || 'Failed to play dice roll');
       }
 
-      // Animate the roll
       setTimeout(() => {
         setDiceResult(data.diceResult);
         setLastWin(data.profit);
@@ -277,7 +270,6 @@ export default function Gambling() {
         throw new Error(data.error || 'Failed to play slot machine');
       }
 
-      // Animate the spin
       setTimeout(() => {
         const symbolEmojis: {[key: string]: string} = {
           'cherry': '🍒',
@@ -323,157 +315,164 @@ export default function Gambling() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonContainer}>
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>
         <View style={styles.logoSection}>
-          <Text style={styles.logo}>🎰 Casino</Text>
+          <Text style={styles.logo}>🎰 CASINO</Text>
         </View>
         <View style={styles.balanceBox}>
-          <Text style={styles.balanceText}>💰 {user?.obrobucks || 0} ObroBucks</Text>
+          <Text style={styles.balanceLabel}>Balance</Text>
+          <Text style={styles.balanceAmount}>{user?.obrobucks || 0}</Text>
         </View>
       </View>
 
-      {/* Main Content */}
-      <View style={[styles.mainContent, isWide && styles.mainContentWide]}>
-        {/* Banner */}
-        <View style={styles.banner}>
-          <Text style={styles.bannerTitle}>🎲 Try Your Luck!</Text>
-          <Text style={styles.bannerSubtitle}>
-            Open loot boxes or play games to win more ObroBucks
-          </Text>
-          {lastWin !== null && (
-            <Text style={[styles.lastWinText, lastWin > 0 ? styles.profit : styles.loss]}>
-              Last result: {lastWin > 0 ? '+' : ''}{lastWin} ObroBucks
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        {/* Stats Banner */}
+        <View style={styles.statsBanner}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{user?.obrobucks || 0}</Text>
+            <Text style={styles.statLabel}>Total Balance</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, lastWin !== null && (lastWin > 0 ? styles.statWin : styles.statLoss)]}>
+              {lastWin !== null ? (lastWin > 0 ? `+${lastWin}` : lastWin) : '---'}
             </Text>
-          )}
+            <Text style={styles.statLabel}>Last Result</Text>
+          </View>
         </View>
 
         {/* Loot Boxes Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📦 Loot Boxes</Text>
+          <Text style={styles.sectionTitle}>🎁 MYSTERY BOXES</Text>
           
           <View style={[styles.boxesContainer, isWide && styles.boxesContainerWide]}>
             {/* Bronze Box */}
-            <View style={styles.lootBox}>
-              <View style={[styles.boxIcon, styles.bronzeBox]}>
-                <Text style={styles.boxEmoji}>📦</Text>
+            <TouchableOpacity 
+              style={[styles.lootBox, styles.bronzeBox]}
+              onPress={() => openLootBox(100, 'Bronze')}
+              disabled={isOpening}
+              activeOpacity={0.8}
+            >
+              <View style={styles.boxHeader}>
+                <Text style={styles.boxTier}>BRONZE</Text>
+                <View style={styles.boxBadge}>
+                  <Text style={styles.boxBadgeText}>0-2.5x</Text>
+                </View>
               </View>
-              <Text style={styles.boxTitle}>Bronze Box</Text>
-              <Text style={styles.boxDescription}>Win 0-250 ObroBucks</Text>
-              <Text style={styles.boxCost}>Cost: 100 ObroBucks</Text>
-              <TouchableOpacity
-                style={[styles.openButton, styles.bronzeButton, isOpening && styles.buttonDisabled]}
-                onPress={() => openLootBox(100, 'Bronze')}
-                disabled={isOpening}
-              >
-                <Text style={styles.buttonText}>
-                  {isOpening ? 'Opening...' : 'Open Box'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+              <Text style={styles.boxEmoji}>📦</Text>
+              <Text style={styles.boxPrize}>0 - 250</Text>
+              <Text style={styles.boxPrizeLabel}>ObroBucks</Text>
+              <View style={styles.boxCostContainer}>
+                <Text style={styles.boxCostAmount}>100</Text>
+                <Text style={styles.boxCostLabel}>to open</Text>
+              </View>
+              <View style={[styles.openButton, isOpening && styles.buttonDisabled]}>
+                <Text style={styles.openButtonText}>{isOpening ? '...' : 'OPEN'}</Text>
+              </View>
+            </TouchableOpacity>
 
             {/* Silver Box */}
-            <View style={styles.lootBox}>
-              <View style={[styles.boxIcon, styles.silverBox]}>
-                <Text style={styles.boxEmoji}>📦</Text>
+            <TouchableOpacity 
+              style={[styles.lootBox, styles.silverBox]}
+              onPress={() => openLootBox(250, 'Silver')}
+              disabled={isOpening}
+              activeOpacity={0.8}
+            >
+              <View style={styles.boxHeader}>
+                <Text style={styles.boxTier}>SILVER</Text>
+                <View style={[styles.boxBadge, styles.silverBadge]}>
+                  <Text style={styles.boxBadgeText}>0-3.5x</Text>
+                </View>
               </View>
-              <Text style={styles.boxTitle}>Silver Box</Text>
-              <Text style={styles.boxDescription}>Win 0-875 ObroBucks</Text>
-              <Text style={styles.boxCost}>Cost: 250 ObroBucks</Text>
-              <TouchableOpacity
-                style={[styles.openButton, styles.silverButton, isOpening && styles.buttonDisabled]}
-                onPress={() => openLootBox(250, 'Silver')}
-                disabled={isOpening}
-              >
-                <Text style={styles.buttonText}>
-                  {isOpening ? 'Opening...' : 'Open Box'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+              <Text style={styles.boxEmoji}>📦</Text>
+              <Text style={styles.boxPrize}>0 - 875</Text>
+              <Text style={styles.boxPrizeLabel}>ObroBucks</Text>
+              <View style={styles.boxCostContainer}>
+                <Text style={styles.boxCostAmount}>250</Text>
+                <Text style={styles.boxCostLabel}>to open</Text>
+              </View>
+              <View style={[styles.openButton, isOpening && styles.buttonDisabled]}>
+                <Text style={styles.openButtonText}>{isOpening ? '...' : 'OPEN'}</Text>
+              </View>
+            </TouchableOpacity>
 
             {/* Gold Box */}
-            <View style={styles.lootBox}>
-              <View style={[styles.boxIcon, styles.goldBox]}>
-                <Text style={styles.boxEmoji}>📦</Text>
+            <TouchableOpacity 
+              style={[styles.lootBox, styles.goldBox]}
+              onPress={() => openLootBox(500, 'Gold')}
+              disabled={isOpening}
+              activeOpacity={0.8}
+            >
+              <View style={styles.boxHeader}>
+                <Text style={styles.boxTier}>GOLD</Text>
+                <View style={[styles.boxBadge, styles.goldBadge]}>
+                  <Text style={styles.boxBadgeText}>0-5x</Text>
+                </View>
               </View>
-              <Text style={styles.boxTitle}>Gold Box</Text>
-              <Text style={styles.boxDescription}>Win 0-2,500 ObroBucks</Text>
-              <Text style={styles.boxCost}>Cost: 500 ObroBucks</Text>
-              <TouchableOpacity
-                style={[styles.openButton, styles.goldButton, isOpening && styles.buttonDisabled]}
-                onPress={() => openLootBox(500, 'Gold')}
-                disabled={isOpening}
-              >
-                <Text style={styles.buttonText}>
-                  {isOpening ? 'Opening...' : 'Open Box'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+              <Text style={styles.boxEmoji}>📦</Text>
+              <Text style={styles.boxPrize}>0 - 2,500</Text>
+              <Text style={styles.boxPrizeLabel}>ObroBucks</Text>
+              <View style={styles.boxCostContainer}>
+                <Text style={styles.boxCostAmount}>500</Text>
+                <Text style={styles.boxCostLabel}>to open</Text>
+              </View>
+              <View style={[styles.openButton, isOpening && styles.buttonDisabled]}>
+                <Text style={styles.openButtonText}>{isOpening ? '...' : 'OPEN'}</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 
         {/* Games Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🎮 Gambling Games</Text>
+          <Text style={styles.sectionTitle}>🎮 CLASSIC GAMES</Text>
           
           <View style={[styles.gamesContainer, isWide && styles.gamesContainerWide]}>
             {/* Coin Flip */}
-            <TouchableOpacity style={styles.gameCard} onPress={() => setShowCoinFlipModal(true)}>
+            <TouchableOpacity 
+              style={styles.gameCard} 
+              onPress={() => setShowCoinFlipModal(true)}
+              activeOpacity={0.8}
+            >
               <Text style={styles.gameEmoji}>🪙</Text>
-              <Text style={styles.gameTitle}>Coin Flip</Text>
-              <Text style={styles.gameDescription}>Double or nothing!</Text>
-              <View style={styles.playBadge}>
-                <Text style={styles.playText}>Play Now</Text>
-              </View>
+              <Text style={styles.gameTitle}>COIN FLIP</Text>
+              <Text style={styles.gameOdds}>50/50</Text>
+              <Text style={styles.gameDescription}>Double or Nothing</Text>
             </TouchableOpacity>
 
             {/* Dice Roll */}
-            <TouchableOpacity style={styles.gameCard} onPress={() => setShowDiceRollModal(true)}>
+            <TouchableOpacity 
+              style={styles.gameCard} 
+              onPress={() => setShowDiceRollModal(true)}
+              activeOpacity={0.8}
+            >
               <Text style={styles.gameEmoji}>🎲</Text>
-              <Text style={styles.gameTitle}>Dice Roll</Text>
-              <Text style={styles.gameDescription}>Roll 4-6 to win!</Text>
-              <View style={styles.playBadge}>
-                <Text style={styles.playText}>Play Now</Text>
-              </View>
+              <Text style={styles.gameTitle}>DICE ROLL</Text>
+              <Text style={styles.gameOdds}>50/50</Text>
+              <Text style={styles.gameDescription}>Roll 4-6 to Win</Text>
             </TouchableOpacity>
 
             {/* Slots */}
-            <TouchableOpacity style={styles.gameCard} onPress={() => setShowSlotMachineModal(true)}>
+            <TouchableOpacity 
+              style={styles.gameCard} 
+              onPress={() => setShowSlotMachineModal(true)}
+              activeOpacity={0.8}
+            >
               <Text style={styles.gameEmoji}>🎰</Text>
-              <Text style={styles.gameTitle}>Slot Machine</Text>
-              <Text style={styles.gameDescription}>Match symbols to win!</Text>
-              <View style={styles.playBadge}>
-                <Text style={styles.playText}>Play Now</Text>
-              </View>
+              <Text style={styles.gameTitle}>SLOTS</Text>
+              <Text style={styles.gameOdds}>UP TO 10x</Text>
+              <Text style={styles.gameDescription}>Match & Win Big</Text>
             </TouchableOpacity>
           </View>
         </View>
+      </ScrollView>
 
-        {/* Info Card */}
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>ℹ️ How It Works</Text>
-          <Text style={styles.infoText}>
-            • Loot boxes: Random multiplier (0x-5x based on tier)
-          </Text>
-          <Text style={styles.infoText}>
-            • Coin Flip: 50/50 chance to double your bet
-          </Text>
-          <Text style={styles.infoText}>
-            • Dice Roll: Roll 4-6 to double your bet
-          </Text>
-          <Text style={styles.infoText}>
-            • Slot Machine: Match symbols for big multipliers
-          </Text>
-          <Text style={styles.warningText}>
-            ⚠️ Gamble responsibly! This is just for fun.
-          </Text>
-        </View>
-      </View>
-
+      {/* Modals remain the same */}
       {/* Coin Flip Modal */}
       <Modal
         visible={showCoinFlipModal}
@@ -497,19 +496,20 @@ export default function Gambling() {
                 style={[styles.choiceButton, coinChoice === 'heads' && styles.choiceButtonSelected]}
                 onPress={() => setCoinChoice('heads')}
               >
-                <Text style={styles.choiceButtonText}>HEADS</Text>
+                <Text style={[styles.choiceButtonText, coinChoice === 'heads' && styles.choiceButtonTextSelected]}>HEADS</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.choiceButton, coinChoice === 'tails' && styles.choiceButtonSelected]}
                 onPress={() => setCoinChoice('tails')}
               >
-                <Text style={styles.choiceButtonText}>TAILS</Text>
+                <Text style={[styles.choiceButtonText, coinChoice === 'tails' && styles.choiceButtonTextSelected]}>TAILS</Text>
               </TouchableOpacity>
             </View>
             
             <TextInput
               style={styles.betInput}
               placeholder="Bet Amount"
+              placeholderTextColor="#999"
               keyboardType="numeric"
               value={betAmount}
               onChangeText={setBetAmount}
@@ -554,6 +554,7 @@ export default function Gambling() {
             <TextInput
               style={styles.betInput}
               placeholder="Bet Amount"
+              placeholderTextColor="#999"
               keyboardType="numeric"
               value={betAmount}
               onChangeText={setBetAmount}
@@ -604,6 +605,7 @@ export default function Gambling() {
             <TextInput
               style={styles.betInput}
               placeholder="Bet Amount"
+              placeholderTextColor="#999"
               keyboardType="numeric"
               value={betAmount}
               onChangeText={setBetAmount}
@@ -626,14 +628,17 @@ export default function Gambling() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#7C6FD8',
+    backgroundColor: '#f5f5f7',
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     paddingBottom: 40,
@@ -643,236 +648,261 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
+    paddingVertical: 20,
+    paddingTop: 50,
+    backgroundColor: '#7C6FD8',
+  },
+  backButtonContainer: {
+    padding: 8,
   },
   backButton: {
-    color: '#7C6FD8',
+    color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   logoSection: {
     flex: 1,
     alignItems: 'center',
   },
   logo: {
-    color: '#7C6FD8',
-    fontSize: 22,
-    fontWeight: 'bold',
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 2,
   },
   balanceBox: {
-    backgroundColor: '#FFA500',
+    backgroundColor: '#fff',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 20,
-  },
-  balanceText: {
-    fontWeight: 'bold',
-    color: '#fff',
-    fontSize: 14,
-  },
-  mainContent: {
-    padding: 16,
-  },
-  mainContentWide: {
-    maxWidth: 1200,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  banner: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 24,
+    borderRadius: 12,
+    minWidth: 100,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
   },
-  bannerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+  balanceLabel: {
+    fontSize: 10,
+    color: '#7C6FD8',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  bannerSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+  balanceAmount: {
+    fontSize: 18,
+    color: '#7C6FD8',
+    fontWeight: '900',
   },
-  lastWinText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 12,
+  statsBanner: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    margin: 16,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    shadowColor: '#7C6FD8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
-  profit: {
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#7C6FD8',
+    marginBottom: 4,
+  },
+  statWin: {
     color: '#2ecc71',
   },
-  loss: {
+  statLoss: {
     color: '#e74c3c',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#999',
+    textTransform: 'uppercase',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  statDivider: {
+    width: 1,
+    height: 50,
+    backgroundColor: '#e0e0e0',
   },
   section: {
     marginBottom: 24,
+    paddingHorizontal: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#7C6FD8',
     marginBottom: 16,
-    paddingHorizontal: 4,
+    letterSpacing: 1,
   },
   boxesContainer: {
-    gap: 16,
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
   },
   boxesContainerWide: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 16,
   },
   lootBox: {
+    flex: 1,
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 20,
+    padding: 16,
     alignItems: 'center',
+    minWidth: 0,
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 12,
+    elevation: 5,
   },
-  boxIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
+  bronzeBox: {
+    borderTopWidth: 4,
+    borderTopColor: '#CD7F32',
+  },
+  silverBox: {
+    borderTopWidth: 4,
+    borderTopColor: '#C0C0C0',
+  },
+  goldBox: {
+    borderTopWidth: 4,
+    borderTopColor: '#FFD700',
+  },
+  boxHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 12,
+  },
+  boxTier: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#7C6FD8',
+    letterSpacing: 1,
+  },
+  boxBadge: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  silverBadge: {
+    backgroundColor: '#f5f5f5',
+  },
+  goldBadge: {
+    backgroundColor: '#FFF8DC',
+  },
+  boxBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#666',
+  },
+  boxEmoji: {
+    fontSize: 48,
+    marginVertical: 8,
+  },
+  boxPrize: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#333',
+    marginTop: 8,
+  },
+  boxPrizeLabel: {
+    fontSize: 10,
+    color: '#999',
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  boxCostContainer: {
     alignItems: 'center',
     marginBottom: 12,
   },
-  boxEmoji: {
-    fontSize: 40,
-  },
-  bronzeBox: {
-    backgroundColor: '#CD7F32',
-  },
-  silverBox: {
-    backgroundColor: '#C0C0C0',
-  },
-  goldBox: {
-    backgroundColor: '#FFD700',
-  },
-  boxTitle: {
+  boxCostAmount: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  boxDescription: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 8,
-  },
-  boxCost: {
-    fontSize: 14,
+    fontWeight: '900',
     color: '#7C6FD8',
-    fontWeight: '600',
-    marginBottom: 16,
+  },
+  boxCostLabel: {
+    fontSize: 10,
+    color: '#999',
   },
   openButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 8,
+    backgroundColor: '#7C6FD8',
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     width: '100%',
     alignItems: 'center',
   },
-  bronzeButton: {
-    backgroundColor: '#CD7F32',
-  },
-  silverButton: {
-    backgroundColor: '#C0C0C0',
-  },
-  goldButton: {
-    backgroundColor: '#FFD700',
+  openButtonText: {
+    color: '#fff',
+    fontWeight: '900',
+    fontSize: 14,
+    letterSpacing: 1,
   },
   buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    opacity: 0.4,
   },
   gamesContainer: {
-    gap: 16,
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
   },
   gamesContainerWide: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 16,
   },
   gameCard: {
+    flex: 1,
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 20,
+    padding: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    minWidth: 0,
+    shadowColor: '#7C6FD8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   gameEmoji: {
     fontSize: 48,
     marginBottom: 12,
   },
   gameTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 13,
+    fontWeight: '900',
     color: '#333',
     marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  gameOdds: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#7C6FD8',
+    marginBottom: 8,
   },
   gameDescription: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 12,
-  },
-  playBadge: {
-    backgroundColor: '#2ecc71',
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-  },
-  playText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  infoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 6,
-    lineHeight: 20,
-  },
-  warningText: {
-    fontSize: 13,
-    color: '#e74c3c',
-    marginTop: 12,
+    fontSize: 11,
+    color: '#999',
+    textAlign: 'center',
     fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -884,16 +914,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     maxWidth: 400,
     width: '100%',
+    shadowColor: '#7C6FD8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
   },
   gameModalTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '900',
+    color: '#7C6FD8',
     marginBottom: 8,
   },
   gameModalSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: '#999',
     marginBottom: 24,
     textAlign: 'center',
   },
@@ -901,31 +936,33 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#7C6FD8',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
+    borderWidth: 4,
+    borderColor: '#fff',
   },
   coinResultText: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '900',
+    color: '#fff',
   },
   diceDisplay: {
     width: 120,
     height: 120,
     borderRadius: 12,
     backgroundColor: '#fff',
-    borderWidth: 3,
-    borderColor: '#333',
+    borderWidth: 4,
+    borderColor: '#7C6FD8',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
   },
   diceResultText: {
     fontSize: 64,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '900',
+    color: '#7C6FD8',
   },
   slotDisplay: {
     flexDirection: 'row',
@@ -936,7 +973,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 100,
     borderRadius: 12,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f5f5f7',
     borderWidth: 3,
     borderColor: '#7C6FD8',
     justifyContent: 'center',
@@ -949,53 +986,69 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginBottom: 24,
+    width: '100%',
   },
   choiceButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    backgroundColor: '#e0e0e0',
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: '#f5f5f7',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
   },
   choiceButtonSelected: {
     backgroundColor: '#7C6FD8',
+    borderColor: '#7C6FD8',
   },
   choiceButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '900',
+    color: '#999',
+  },
+  choiceButtonTextSelected: {
     color: '#fff',
   },
   betInput: {
     width: '100%',
     borderWidth: 2,
     borderColor: '#7C6FD8',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 18,
     marginBottom: 16,
     textAlign: 'center',
+    color: '#333',
+    backgroundColor: '#f5f5f7',
+    fontWeight: '700',
   },
   playButton: {
     width: '100%',
-    backgroundColor: '#2ecc71',
-    paddingVertical: 14,
+    backgroundColor: '#7C6FD8',
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 12,
+    shadowColor: '#7C6FD8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   playButtonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '900',
     fontSize: 16,
+    letterSpacing: 1,
   },
   cancelButton: {
     width: '100%',
     paddingVertical: 12,
   },
   cancelButtonText: {
-    color: '#666',
+    color: '#999',
     fontSize: 14,
     textAlign: 'center',
+    fontWeight: '600',
   },
 });
