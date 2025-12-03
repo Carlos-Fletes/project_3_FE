@@ -10,6 +10,7 @@ type RootStackParamList = {
   Home: undefined;
   Profile: undefined;
   Gambling: undefined;
+  CreatePoll: undefined;
 };
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -71,8 +72,10 @@ export default function Home() {
         <View style={[styles.sidebar, isWide && styles.sidebarWide]}>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Create a Poll</Text>
-            <TouchableOpacity style={styles.newPollButton}>
-              <Text style={styles.newPollText}>+ New Poll</Text>
+            <TouchableOpacity
+              style={styles.newPollButton}
+              onPress={() => navigation.navigate('CreatePoll')}>
+            <Text style={styles.newPollText}>+ New Poll</Text>
             </TouchableOpacity>
           </View>
 

@@ -11,6 +11,7 @@ import Home from './screens/home';
 import Profile from './screens/profile';
 import EditProfile from './screens/EditProfile';
 import Gambling from './screens/gambling';
+import CreatePoll from './screens/createPoll';
 import { UserProvider, useUser } from './contexts/UserContext';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -21,6 +22,7 @@ type RootStackParamList = {
   Profile: undefined;
   EditProfile: undefined;
   Gambling: undefined;
+  CreatePoll: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -151,6 +153,11 @@ export default function App() {
             name="Gambling" 
             component={Gambling}
             options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="CreatePoll" 
+            component={CreatePoll}
+            options={{ title: 'Create Poll' }} 
           />
         </Stack.Navigator>
       </NavigationContainer>
