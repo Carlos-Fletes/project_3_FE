@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Alert, Image, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useUser } from '../contexts/UserContext';
+import { getFentReward, getRarityColor, type FentReward } from '../utils/fentRarity';
 
 type RootStackParamList = {
   SignIn: undefined;
@@ -23,6 +24,10 @@ export default function Gambling() {
 
   const [isOpening, setIsOpening] = useState(false);
   const [lastWin, setLastWin] = useState<number | null>(null);
+  const [showRewardModal, setShowRewardModal] = useState(false);
+  const [currentReward, setCurrentReward] = useState<FentReward | null>(null);
+  const [currentWinAmount, setCurrentWinAmount] = useState(0);
+  const [currentProfit, setCurrentProfit] = useState(0);
 
   const openLootBox = async (cost: number, boxType: string) => {
     if (!user || !user.id) {
@@ -283,6 +288,60 @@ export default function Gambling() {
           </Text>
         </View>
       </View>
+
+      {/* Reward Modal */}
+      <Modal
+        visible={showRewardModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowRewardModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {currentReward && (
+              <>
+                <Text style={styles.modalTitle}>
+                  {currentProfit > 0 ? '🎉 Congratulations!' : '😢 Better luck next time!'}
+                </Text>
+                
+                {/* Fent Image */}
+                <View style={[styles.fentImageContainer, { borderColor: getRarityColor(currentReward.rarity) }]}>
+                  <Image 
+                    source={currentReward.imageSource} 
+                    style={styles.fentImage}
+                    resizeMode="contain"
+                  />
+                </View>
+                
+                {/* Rarity Badge */}
+                <View style={[styles.rarityBadge, { backgroundColor: getRarityColor(currentReward.rarity) }]}>
+                  <Text style={styles.rarityText}>{currentReward.rarity} (Tier {currentReward.tier})</Text>
+                </View>
+                
+                {/* Message */}
+                <Text style={styles.rewardMessage}>{currentReward.message}</Text>
+                
+                {/* Winnings Info */}
+                <View style={styles.winningsInfo}>
+                  <Text style={styles.winningsLabel}>You won:</Text>
+                  <Text style={styles.winningsAmount}>{currentWinAmount} ObroBucks</Text>
+                  <Text style={[styles.profitText, currentProfit > 0 ? styles.profitPositive : styles.profitNegative]}>
+                    {currentProfit > 0 ? '+' : ''}{currentProfit} ObroBucks
+                  </Text>
+                </View>
+                
+                {/* Close Button */}
+                <TouchableOpacity 
+                  style={styles.closeButton}
+                  onPress={() => setShowRewardModal(false)}
+                >
+                  <Text style={styles.closeButtonText}>Awesome!</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -526,5 +585,107 @@ const styles = StyleSheet.create({
     color: '#e74c3c',
     marginTop: 12,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    maxWidth: 400,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  fentImageContainer: {
+    width: 280,
+    height: 280,
+    borderRadius: 16,
+    borderWidth: 4,
+    padding: 8,
+    backgroundColor: '#f8f9fa',
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  fentImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  rarityBadge: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    marginBottom: 12,
+  },
+  rarityText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  rewardMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    fontStyle: 'italic',
+  },
+  winningsInfo: {
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    width: '100%',
+  },
+  winningsLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  winningsAmount: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  profitText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  profitPositive: {
+    color: '#2ecc71',
+  },
+  profitNegative: {
+    color: '#e74c3c',
+  },
+  closeButton: {
+    backgroundColor: '#7C6FD8',
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
