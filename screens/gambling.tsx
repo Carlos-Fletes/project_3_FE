@@ -13,45 +13,84 @@ type RootStackParamList = {
 
 type GamblingScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Gambling'>;
 
+const API_URL = 'https://betsocial-fde6ef886274.herokuapp.com';
+
 export default function Gambling() {
   const navigation = useNavigation<GamblingScreenNavigationProp>();
-  const { user } = useUser();
+  const { user, refreshUser } = useUser();
   const { width } = useWindowDimensions();
   const isWide = width > 800;
 
   const [isOpening, setIsOpening] = useState(false);
   const [lastWin, setLastWin] = useState<number | null>(null);
 
-  const openLootBox = (cost: number, boxType: string) => {
-    if (!user || user.obrobucks < cost) {
-      Alert.alert('Insufficient Funds', 'You don\'t have enough ObroBucks to open this loot box!');
+  const openLootBox = async (cost: number, boxType: string) => {
+    if (!user || !user.id) {
+      Alert.alert('Error', 'User not found. Please log in again.');
+      return;
+    }
+
+    const currentBalance = user.obrobucks || 0;
+    if (currentBalance < cost) {
+      Alert.alert('Insufficient Funds', `You need ${cost} ObroBucks but only have ${currentBalance}.`);
       return;
     }
 
     setIsOpening(true);
     
-    // fake "opening" animation for now
-    setTimeout(() => {
-      // get a random reward between 0.5x and 3x the cost
+    try {
+      // Calculate win amount (0.5x to 3x the cost)
       const multiplier = Math.random() * 2.5 + 0.5;
       const winAmount = Math.round(cost * multiplier);
       
-      setLastWin(winAmount - cost);
-      setIsOpening(false);
+      console.log('Opening loot box:', { userId: user.id, cost, winAmount });
       
-      const profit = winAmount - cost;
+      // Call backend API
+      const response = await fetch(`${API_URL}/api/gambling/open-lootbox`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          cost: cost,
+          winAmount: winAmount
+        })
+      });
+
+      const data = await response.json();
+      console.log('API Response:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to open loot box');
+      }
+
+      // Update local state
+      const profit = data.profit;
+      setLastWin(profit);
+
+      // Refresh user data to get updated balance
+      await refreshUser();
+
+      // Show result
       if (profit > 0) {
         Alert.alert(
           '🎉 Winner!',
-          `You won ${winAmount} ObroBucks!\nProfit: +${profit} ObroBucks`
+          `You won ${winAmount} ObroBucks!\nProfit: +${profit} ObroBucks\n\nNew balance: ${data.newBalance} ObroBucks`
         );
       } else {
         Alert.alert(
           '😢 Better luck next time!',
-          `You won ${winAmount} ObroBucks.\nLoss: ${profit} ObroBucks`
+          `You won ${winAmount} ObroBucks.\nLoss: ${profit} ObroBucks\n\nNew balance: ${data.newBalance} ObroBucks`
         );
       }
-    }, 1500);
+      
+    } catch (error: any) {
+      console.error('Error opening loot box:', error);
+      Alert.alert('Error', error.message || 'Failed to open loot box. Please try again.');
+    } finally {
+      setIsOpening(false);
+    }
   };
 
   const playCoinFlip = () => {
@@ -114,7 +153,7 @@ export default function Gambling() {
               <Text style={styles.boxDescription}>Win 50-150 ObroBucks</Text>
               <Text style={styles.boxCost}>Cost: 100 ObroBucks</Text>
               <TouchableOpacity
-                style={[styles.openButton, styles.bronzeButton]}
+                style={[styles.openButton, styles.bronzeButton, isOpening && styles.buttonDisabled]}
                 onPress={() => openLootBox(100, 'Bronze')}
                 disabled={isOpening}
               >
@@ -133,7 +172,7 @@ export default function Gambling() {
               <Text style={styles.boxDescription}>Win 125-375 ObroBucks</Text>
               <Text style={styles.boxCost}>Cost: 250 ObroBucks</Text>
               <TouchableOpacity
-                style={[styles.openButton, styles.silverButton]}
+                style={[styles.openButton, styles.silverButton, isOpening && styles.buttonDisabled]}
                 onPress={() => openLootBox(250, 'Silver')}
                 disabled={isOpening}
               >
@@ -152,7 +191,7 @@ export default function Gambling() {
               <Text style={styles.boxDescription}>Win 250-750 ObroBucks</Text>
               <Text style={styles.boxCost}>Cost: 500 ObroBucks</Text>
               <TouchableOpacity
-                style={[styles.openButton, styles.goldButton]}
+                style={[styles.openButton, styles.goldButton, isOpening && styles.buttonDisabled]}
                 onPress={() => openLootBox(500, 'Gold')}
                 disabled={isOpening}
               >
@@ -231,7 +270,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#7C6FD8',
   },
   content: {
-    paddingTop: 20,
     paddingBottom: 40,
   },
   header: {
@@ -387,6 +425,9 @@ const styles = StyleSheet.create({
   },
   goldButton: {
     backgroundColor: '#FFD700',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   buttonText: {
     color: '#fff',

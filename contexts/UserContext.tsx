@@ -28,6 +28,7 @@ interface UserContextType {
   login: (googleUser: any) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -197,8 +198,35 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // New function: Refresh user data from backend
+  const refreshUser = async () => {
+    if (!user || !user.id) {
+      console.error('No user logged in to refresh');
+      return;
+    }
+
+    try {
+      console.log('Refreshing user data for ID:', user.id);
+      const response = await fetch(`${API_BASE_URL}/api/users/${user.id}`);
+      
+      if (response.ok) {
+        const refreshedUser = await response.json();
+        console.log('User data refreshed:', refreshedUser);
+        setUser(refreshedUser);
+        await AsyncStorage.setItem('@user', JSON.stringify(refreshedUser));
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to refresh user:', response.status, errorText);
+        throw new Error(`Failed to refresh user: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Refresh user error:', error);
+      throw error;
+    }
+  };
+
   return (
-    <UserContext.Provider value={{ user, isLoading, login, logout, updateUser }}>
+    <UserContext.Provider value={{ user, isLoading, login, logout, updateUser, refreshUser }}>
       {children}
     </UserContext.Provider>
   );
