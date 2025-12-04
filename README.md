@@ -120,7 +120,8 @@ When you're ready to integrate your API:
 
 ## How to Run 💻
 
-- npx expo start --dev-client
+- npx expo start --dev-client or npx expo run:android
+(if you run into errors running on windows make sure its out of onedrive it can cause issues)
 ---
 
 Happy coding! 🎉

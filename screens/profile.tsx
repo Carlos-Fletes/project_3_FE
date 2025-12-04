@@ -1,12 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '../contexts/UserContext';
 
 type RootStackParamList = {
-  SignIn: undefined; // Make sure this matches your App.tsx
+  SignIn: undefined;
   Home: undefined;
   Profile: undefined;
 };
@@ -33,139 +33,256 @@ export default function Profile() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
-      <Text style={styles.header}>Your Profile</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <View style={styles.headerSpacer} />
+      </View>
 
-      {/* Profile Picture */}
-      <Image
-        source={{ uri: user?.profile_picture_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' }}
-        style={styles.avatar}
-      />
-
-      {/* Username and Info */}
-      <Text style={styles.name}>{user?.name || 'Loading...'}</Text>
-      <Text style={styles.username}>@{user?.username || 'loading'}</Text>
-
-      {/* Bio */}
-      {user?.bio && (
-        <Text style={styles.bio}>{user.bio}</Text>
-      )}
-
-      {/* Stats */}
-      <View style={styles.statsCard}>
-        <View style={styles.statRow}>
-          <Ionicons name="wallet" size={18} color="#5E4AE3" />
-          <Text style={styles.statText}>ObroBucks: {user?.obrobucks || 0}</Text>
+      {/* Profile Card */}
+      <View style={styles.profileCard}>
+        {/* Profile Picture */}
+        <View style={styles.avatarContainer}>
+          <Image
+            source={{ uri: user?.profile_picture_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' }}
+            style={styles.avatar}
+          />
+          <View style={styles.statusBadge}>
+            <View style={styles.statusDot} />
+          </View>
         </View>
-        <View style={styles.statRow}>
-          <Ionicons name="trending-up" size={18} color="#5E4AE3" />
-          <Text style={styles.statText}>Win Rate: 68%</Text>
+
+        {/* Username and Info */}
+        <Text style={styles.name}>{user?.name || 'Loading...'}</Text>
+        <Text style={styles.username}>@{user?.username || 'loading'}</Text>
+
+        {/* Bio */}
+        {user?.bio && (
+          <Text style={styles.bio}>{user.bio}</Text>
+        )}
+      </View>
+
+      {/* Stats Cards */}
+      <View style={styles.statsGrid}>
+        <View style={styles.statCard}>
+          <View style={styles.statIconContainer}>
+            <Ionicons name="wallet" size={24} color="#7C6FD8" />
+          </View>
+          <Text style={styles.statValue}>{user?.obrobucks || 0}</Text>
+          <Text style={styles.statLabel}>ObroBucks</Text>
         </View>
-        <View style={styles.statRow}>
-          <Ionicons name="stats-chart" size={18} color="#5E4AE3" />
-          <Text style={styles.statText}>Total Bets: 32</Text>
+
+        <View style={styles.statCard}>
+          <View style={styles.statIconContainer}>
+            <Ionicons name="trending-up" size={24} color="#2ecc71" />
+          </View>
+          <Text style={styles.statValue}>68%</Text>
+          <Text style={styles.statLabel}>Win Rate</Text>
+        </View>
+
+        <View style={styles.statCard}>
+          <View style={styles.statIconContainer}>
+            <Ionicons name="stats-chart" size={24} color="#FFA500" />
+          </View>
+          <Text style={styles.statValue}>32</Text>
+          <Text style={styles.statLabel}>Total Bets</Text>
         </View>
       </View>
 
-      {/* Buttons */}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => navigation.navigate('EditProfile' as any)}
-      >
-        <Text style={styles.buttonText}>Edit Profile</Text>
-      </TouchableOpacity>
+      {/* Action Buttons */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate('EditProfile' as any)}
+        >
+          <Ionicons name="create-outline" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Edit Profile</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => navigation.navigate('Home')}
-      >
-        <Text style={styles.buttonText}>Back to Home</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate('Home')}
+        >
+          <Ionicons name="home-outline" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Back to Home</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.button, styles.logoutButton]}
-        onPress={handleLogout} // Logout clears session and resets stack
-      >
-        <Text style={styles.buttonText}>Log Out</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={[styles.button, styles.logoutButton]}
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out-outline" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Log Out</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ECE9FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    backgroundColor: '#f5f5f7',
+  },
+  content: {
+    paddingBottom: 40,
   },
   header: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    paddingTop: 50,
+    backgroundColor: '#7C6FD8',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: 0.5,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  profileCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 24,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#7C6FD8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  avatarContainer: {
+    position: 'relative',
     marginBottom: 20,
-    color: '#5E4AE3',
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 10,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 4,
+    borderColor: '#7C6FD8',
+  },
+  statusBadge: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#2ecc71',
   },
   name: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '900',
     color: '#333',
+    marginBottom: 4,
+    letterSpacing: 0.3,
   },
   username: {
-    color: '#777',
-    marginBottom: 20,
+    color: '#999',
+    fontSize: 16,
+    marginBottom: 16,
+    fontWeight: '600',
   },
   bio: {
-    fontSize: 14,
-    color: '#555',
+    fontSize: 15,
+    color: '#666',
     textAlign: 'center',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    lineHeight: 20,
+    marginTop: 8,
+    lineHeight: 22,
+    fontWeight: '500',
   },
-  statsCard: {
+  statsGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginTop: 24,
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
     backgroundColor: '#fff',
-    width: '80%',
-    borderRadius: 10,
+    borderRadius: 20,
     padding: 20,
     alignItems: 'center',
-    marginBottom: 30,
-    shadowColor: '#000',
+    shadowColor: '#7C6FD8',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 12,
+    elevation: 4,
   },
-  statRow: {
-    flexDirection: 'row',
+  statIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f5f5f7',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
-    marginVertical: 5,
+    marginBottom: 12,
   },
-  statText: {
-    fontSize: 16,
+  statValue: {
+    fontSize: 24,
+    fontWeight: '900',
     color: '#333',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  buttonContainer: {
+    paddingHorizontal: 16,
+    marginTop: 32,
+    gap: 12,
   },
   button: {
-    backgroundColor: '#5E4AE3',
-    width: '80%',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: '#7C6FD8',
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    gap: 8,
+    padding: 16,
+    borderRadius: 16,
+    shadowColor: '#7C6FD8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   logoutButton: {
     backgroundColor: '#e74c3c',
+    shadowColor: '#e74c3c',
   },
   buttonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '900',
     fontSize: 16,
+    letterSpacing: 0.5,
   },
 });
