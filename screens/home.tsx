@@ -1,4 +1,4 @@
-import React from 'react';
+import React , { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,13 +13,146 @@ type RootStackParamList = {
   CreatePoll: undefined;
 };
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+export type PollStatus = 'PENDING' | 'ACTIVE' | 'CLOSED';
+
+export type Poll = {
+  id: number;
+  question: string;
+  status: PollStatus;
+  category: string | null;
+  total_bets: number;
+  created_at: string;
+  ends_at: string | null;
+  options: string[];
+  created_by: string | null;
+  created_by_username?: string | null;
+};
+
+type HomeScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'Home'
+>;
+
+const API_BASE = 'https://betsocial-fde6ef886274.herokuapp.com';
+
+type PollCardProps = { poll: Poll };
+
+function PollCard({ poll }: PollCardProps) {
+  const [betAmount, setBetAmount] = useState('');
+
+  const optionPercents: (string | number)[] = poll.options.map(() => '50%');
+
+  const displayName = poll.created_by_username || 'Anonymous';
+  const handle =
+    poll.created_by_username != null
+      ? `@${poll.created_by_username}`
+      : `Poll #${poll.id}`;
+  const initials =
+    displayName
+      .split(' ')
+      .filter(Boolean)
+      .map((p) => p[0]?.toUpperCase())
+      .join('')
+      .slice(0, 2) || 'U';
+
+  return (
+    <View style={styles.postCard}>
+      <View style={styles.postHeader}>
+        <View style={styles.userInfo}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View>
+            <Text style={styles.username}>{displayName}</Text>
+            <Text style={styles.handle}>{handle} · just now</Text>
+          </View>
+        </View>
+        <TouchableOpacity>
+          <Text style={styles.moreButton}>⋯</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.pollQuestion}>{poll.question}</Text>
+
+      {poll.options.map((opt, idx) => (
+        <View style={styles.pollOption} key={idx}>
+          <View style={styles.optionContent}>
+            <Text style={styles.optionText}>{opt}</Text>
+            <Text style={styles.optionPercent}>{optionPercents[idx]}</Text>
+          </View>
+          <View style={[styles.progressBar, { width: optionPercents[idx] as any }]} />
+          <Text style={styles.betAmount}>$0 bet</Text>
+        </View>
+      ))}
+
+      <View style={styles.betSection}>
+        <TextInput
+          style={styles.betInput}
+          placeholder="Bet amount"
+          placeholderTextColor="#999"
+          value={betAmount}
+          onChangeText={setBetAmount}
+        />
+        <TouchableOpacity
+          style={styles.yesButton}
+          onPress={() => console.log('Bet YES on poll', poll.id)}
+        >
+          <Text style={styles.buttonText}>Bet YES</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.noButton}
+          onPress={() => console.log('Bet NO on poll', poll.id)}
+        >
+          <Text style={styles.buttonText}>Bet NO</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.potentialPayout}>Potential payout: $0</Text>
+
+      <View style={styles.postFooter}>
+        <View style={styles.footerItem}>
+          <Ionicons name="heart-outline" size={18} color="#666" />
+          <Text style={styles.footerCount}>0</Text>
+        </View>
+        <View style={styles.footerItem}>
+          <Ionicons name="chatbubble-outline" size={18} color="#666" />
+          <Text style={styles.footerCount}>0</Text>
+        </View>
+        <View style={styles.footerItem}>
+          <Ionicons name="share-outline" size={18} color="#666" />
+          <Text style={styles.footerCount}>0</Text>
+        </View>
+        <Text style={styles.totalPool}>Total Pool: ${poll.total_bets}</Text>
+      </View>
+    </View>
+  );
+}
 
 export default function Home() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { user } = useUser();
   const { width } = useWindowDimensions();
   const isWide = width > 800;
+
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [loadingPolls, setLoadingPolls] = useState(false);
+
+  useEffect(() => {
+    const loadPolls = async () => {
+      try {
+        setLoadingPolls(true);
+        const res = await fetch(`${API_BASE}/api/polls`);
+        const data: Poll[] = await res.json();
+        setPolls(data);
+      } catch (e) {
+        console.error('Error loading polls', e);
+      } finally {
+        setLoadingPolls(false);
+      }
+    };
+
+    loadPolls();
+  }, []);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -30,12 +163,20 @@ export default function Home() {
         </View>
         <View style={styles.headerRight}>
           <View style={styles.balanceBox}>
-            <Ionicons name="wallet" size={14} color="#fff" style={styles.balanceIcon} />
-            <Text style={styles.balanceText}>{user?.obrobucks || 0} ObroBucks</Text>
+            <Ionicons
+              name="wallet"
+              size={14}
+              color="#fff"
+              style={styles.balanceIcon}
+            />
+            <Text style={styles.balanceText}>
+              {user?.obrobucks || 0} ObroBucks
+            </Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.profileCircle}
-            onPress={() => navigation.navigate('Profile')}>
+            onPress={() => navigation.navigate('Profile')}
+          >
             <Text style={styles.profileInitial}>
               {user?.first_name?.[0] || user?.name?.[0] || 'U'}
             </Text>
@@ -51,17 +192,19 @@ export default function Home() {
             <Text style={styles.activeTabText}>Feed</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.inactiveTab}
-          onPress={() => navigation.navigate('Profile')}>
+          onPress={() => navigation.navigate('Profile')}
+        >
           <View style={styles.tabContent}>
             <Ionicons name="person" size={16} color="#666" />
             <Text style={styles.inactiveTabText}>Profile</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.inactiveTab}
-          onPress={() => navigation.navigate('Gambling')}>
+          onPress={() => navigation.navigate('Gambling')}
+        >
           <Text style={styles.inactiveTabText}>🎰 Casino</Text>
         </TouchableOpacity>
       </View>
@@ -74,16 +217,18 @@ export default function Home() {
             <Text style={styles.cardTitle}>Create a Poll</Text>
             <TouchableOpacity
               style={styles.newPollButton}
-              onPress={() => navigation.navigate('CreatePoll')}>
-            <Text style={styles.newPollText}>+ New Poll</Text>
+              onPress={() => navigation.navigate('CreatePoll')}
+            >
+              <Text style={styles.newPollText}>+ New Poll</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Quick Actions</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.casinoButton}
-              onPress={() => navigation.navigate('Gambling')}>
+              onPress={() => navigation.navigate('Gambling')}
+            >
               <Text style={styles.casinoButtonText}>🎰 Visit Casino</Text>
             </TouchableOpacity>
           </View>
@@ -123,77 +268,19 @@ export default function Home() {
 
         {/* Feed */}
         <View style={[styles.feed, isWide && styles.feedWide]}>
-          {/* First Poll Card */}
-          <View style={styles.postCard}>
-            <View style={styles.postHeader}>
-              <View style={styles.userInfo}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>SC</Text>
-                </View>
-                <View>
-                  <Text style={styles.username}>Sarah Chen</Text>
-                  <Text style={styles.handle}>@sarahc_tech · 2h ago</Text>
-                </View>
-              </View>
-              <TouchableOpacity>
-                <Text style={styles.moreButton}>⋯</Text>
-              </TouchableOpacity>
-            </View>
+          {loadingPolls && (
+            <Text style={{ color: '#fff', marginBottom: 12 }}>Loading polls…</Text>
+          )}
 
-            <Text style={styles.pollQuestion}>Will Bitcoin reach $70,000 by the end of this month? 🚀</Text>
+          {!loadingPolls && polls.length === 0 && (
+            <Text style={{ color: '#fff', marginBottom: 12 }}>
+              No polls yet. Create one!
+            </Text>
+          )}
 
-            <View style={styles.pollOption}>
-              <View style={styles.optionContent}>
-                <Text style={styles.optionText}>Yes, it will!</Text>
-                <Text style={styles.optionPercent}>63%</Text>
-              </View>
-              <View style={[styles.progressBar, { width: '63%' }]} />
-              <Text style={styles.betAmount}>$2,463 bet</Text>
-            </View>
+          {!loadingPolls &&
+            polls.map((poll) => <PollCard key={poll.id} poll={poll} />)}
 
-            <View style={styles.pollOption}>
-              <View style={styles.optionContent}>
-                <Text style={styles.optionText}>No way</Text>
-                <Text style={styles.optionPercent}>37%</Text>
-              </View>
-              <View style={[styles.progressBar, { width: '37%' }]} />
-              <Text style={styles.betAmount}>$1,434 bet</Text>
-            </View>
-
-            <View style={styles.betSection}>
-              <TextInput 
-                style={styles.betInput}
-                placeholder="Bet amount"
-                placeholderTextColor="#999"
-              />
-              <TouchableOpacity style={styles.yesButton}>
-                <Text style={styles.buttonText}>Bet YES</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.noButton}>
-                <Text style={styles.buttonText}>Bet NO</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.potentialPayout}>Potential payout: $0</Text>
-
-            <View style={styles.postFooter}>
-              <View style={styles.footerItem}>
-                <Ionicons name="heart-outline" size={18} color="#666" />
-                <Text style={styles.footerCount}>45</Text>
-              </View>
-              <View style={styles.footerItem}>
-                <Ionicons name="chatbubble-outline" size={18} color="#666" />
-                <Text style={styles.footerCount}>12</Text>
-              </View>
-              <View style={styles.footerItem}>
-                <Ionicons name="share-outline" size={18} color="#666" />
-                <Text style={styles.footerCount}>8</Text>
-              </View>
-              <Text style={styles.totalPool}>Total Pool: $3,897</Text>
-            </View>
-          </View>
-
-          {/* Second Poll Card */}
           <View style={styles.postCard}>
             <View style={styles.postHeader}>
               <View style={styles.userInfo}>
