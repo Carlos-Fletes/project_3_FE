@@ -29,8 +29,8 @@ export default function Home() {
         </View>
         <View style={styles.headerRight}>
           <View style={styles.balanceBox}>
-            <Ionicons name="wallet" size={14} color="#fff" style={styles.balanceIcon} />
-            <Text style={styles.balanceText}>{user?.obrobucks || 0} ObroBucks</Text>
+            <Ionicons name="wallet" size={14} color="#7C6FD8" style={styles.balanceIcon} />
+            <Text style={styles.balanceText}>{user?.obrobucks || 0}</Text>
           </View>
           <TouchableOpacity 
             style={styles.profileCircle}
@@ -54,14 +54,16 @@ export default function Home() {
           style={styles.inactiveTab}
           onPress={() => navigation.navigate('Profile')}>
           <View style={styles.tabContent}>
-            <Ionicons name="person" size={16} color="#666" />
+            <Ionicons name="person" size={16} color="#999" />
             <Text style={styles.inactiveTabText}>Profile</Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.inactiveTab}
           onPress={() => navigation.navigate('Gambling')}>
-          <Text style={styles.inactiveTabText}>🎰 Casino</Text>
+          <View style={styles.tabContent}>
+            <Text style={styles.inactiveTabText}>🎰 Casino</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -175,15 +177,15 @@ export default function Home() {
 
             <View style={styles.postFooter}>
               <View style={styles.footerItem}>
-                <Ionicons name="heart-outline" size={18} color="#666" />
+                <Ionicons name="heart-outline" size={18} color="#999" />
                 <Text style={styles.footerCount}>45</Text>
               </View>
               <View style={styles.footerItem}>
-                <Ionicons name="chatbubble-outline" size={18} color="#666" />
+                <Ionicons name="chatbubble-outline" size={18} color="#999" />
                 <Text style={styles.footerCount}>12</Text>
               </View>
               <View style={styles.footerItem}>
-                <Ionicons name="share-outline" size={18} color="#666" />
+                <Ionicons name="share-outline" size={18} color="#999" />
                 <Text style={styles.footerCount}>8</Text>
               </View>
               <Text style={styles.totalPool}>Total Pool: $3,897</Text>
@@ -218,7 +220,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#7C6FD8',
+    backgroundColor: '#f5f5f7',
   },
   content: {
     padding: 0,
@@ -228,17 +230,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
+    paddingVertical: 20,
+    paddingTop: 50,
+    backgroundColor: '#7C6FD8',
   },
   logoSection: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   logo: {
-    color: '#7C6FD8',
-    fontSize: 22,
-    fontWeight: 'bold',
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   headerRight: {
     flexDirection: 'row',
@@ -246,20 +250,25 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   balanceBox: {
-    backgroundColor: '#FFA500',
+    backgroundColor: '#fff',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   balanceIcon: {
     marginTop: 1,
   },
   balanceText: {
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: '900',
+    color: '#7C6FD8',
     fontSize: 14,
   },
   tabContent: {
@@ -271,31 +280,47 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#667',
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profileInitial: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: '#7C6FD8',
+    fontWeight: '900',
     fontSize: 16,
   },
   navTabs: {
     flexDirection: 'row',
     backgroundColor: '#fff',
     paddingHorizontal: 20,
+    paddingTop: 12,
     gap: 8,
-    paddingBottom: 8,
+    paddingBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   activeTab: {
     backgroundColor: '#7C6FD8',
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 20,
+    borderRadius: 12,
+    shadowColor: '#7C6FD8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   activeTabText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 14,
   },
   inactiveTab: {
@@ -303,8 +328,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   inactiveTabText: {
-    color: '#666',
+    color: '#999',
     fontSize: 14,
+    fontWeight: '600',
   },
   mainLayout: {
     flexDirection: 'column',
@@ -331,85 +357,107 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#7C6FD8',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
+    fontWeight: '900',
+    marginBottom: 16,
     color: '#333',
+    letterSpacing: 0.3,
   },
   statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   statLabel: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#666',
+    fontWeight: '600',
   },
   statValue: {
-    fontSize: 13,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '900',
     color: '#7C6FD8',
   },
   newPollButton: {
     backgroundColor: '#7C6FD8',
-    padding: 10,
-    borderRadius: 8,
+    padding: 14,
+    borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#7C6FD8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   newPollText: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 13,
+    fontWeight: '900',
+    fontSize: 14,
+    letterSpacing: 0.5,
   },
   casinoButton: {
     backgroundColor: '#FFA500',
-    padding: 12,
-    borderRadius: 8,
+    padding: 14,
+    borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#FFA500',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   casinoButtonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '900',
     fontSize: 14,
   },
   trendingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   link: {
     color: '#7C6FD8',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 14,
   },
   trendingCount: {
     color: '#999',
     fontSize: 13,
+    fontWeight: '600',
   },
   postCard: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 20,
+    padding: 24,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#7C6FD8',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   postHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   userInfo: {
     flexDirection: 'row',
@@ -429,106 +477,123 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '900',
     fontSize: 16,
   },
   username: {
-    fontWeight: 'bold',
+    fontWeight: '900',
     fontSize: 16,
     color: '#333',
   },
   handle: {
     color: '#999',
     fontSize: 13,
+    fontWeight: '600',
   },
   moreButton: {
-    fontSize: 20,
+    fontSize: 24,
     color: '#999',
+    fontWeight: '700',
   },
   pollQuestion: {
-    fontSize: 16,
-    marginBottom: 16,
+    fontSize: 17,
+    marginBottom: 20,
     color: '#333',
-    lineHeight: 22,
+    lineHeight: 24,
+    fontWeight: '600',
   },
   pollOption: {
-    marginBottom: 12,
-    backgroundColor: '#F8F9FA',
-    padding: 12,
-    borderRadius: 8,
+    marginBottom: 16,
+    backgroundColor: '#f5f5f7',
+    padding: 16,
+    borderRadius: 12,
     position: 'relative',
   },
   optionContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   optionText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#333',
+    fontWeight: '600',
   },
   optionPercent: {
-    fontWeight: 'bold',
+    fontWeight: '900',
     color: '#7C6FD8',
-    fontSize: 14,
+    fontSize: 15,
   },
   progressBar: {
-    height: 6,
+    height: 8,
     backgroundColor: '#7C6FD8',
-    borderRadius: 3,
-    marginBottom: 6,
+    borderRadius: 4,
+    marginBottom: 8,
   },
   betAmount: {
     fontSize: 12,
     color: '#999',
     textAlign: 'right',
+    fontWeight: '600',
   },
   betSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
-    gap: 8,
+    marginTop: 20,
+    marginBottom: 12,
+    gap: 10,
   },
   betInput: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: '#f5f5f7',
+    padding: 12,
+    borderRadius: 12,
     fontSize: 14,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#E5E5E5',
+    fontWeight: '600',
   },
   yesButton: {
     backgroundColor: '#2ecc71',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 12,
+    shadowColor: '#2ecc71',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   noButton: {
     backgroundColor: '#e74c3c',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 12,
+    shadowColor: '#e74c3c',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '900',
     fontSize: 14,
   },
   potentialPayout: {
     fontSize: 13,
-    color: '#666',
-    marginBottom: 12,
+    color: '#999',
+    marginBottom: 16,
+    fontWeight: '600',
   },
   postFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
-    paddingTop: 12,
+    gap: 24,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: '#f0f0f0',
   },
   footerItem: {
     flexDirection: 'row',
@@ -537,12 +602,13 @@ const styles = StyleSheet.create({
   },
   footerCount: {
     fontSize: 13,
-    color: '#666',
+    color: '#999',
+    fontWeight: '600',
   },
   totalPool: {
     marginLeft: 'auto',
     color: '#2ecc71',
-    fontWeight: '600',
+    fontWeight: '900',
     fontSize: 14,
   },
 });
