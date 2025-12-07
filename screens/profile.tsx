@@ -19,6 +19,7 @@ type ProfileScreenNavigationProp = NativeStackNavigationProp<
 export default function Profile() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { user, logout } = useUser();
+   console.log('Profile user from context:', user);
 
   const handleLogout = async () => {
     try {
