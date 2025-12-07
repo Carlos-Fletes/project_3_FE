@@ -27,6 +27,11 @@ type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+const BACKEND_BASE_URL = 'http://10.0.2.2:8080';
+
+//const BACKEND_BASE_URL = 'https://betsocial-fde6ef886274.herokuapp.com';
+
+
 function SignInScreen({ navigation }: any) {
   const { user, login, logout, isLoading } = useUser();
 
@@ -72,20 +77,43 @@ function SignInScreen({ navigation }: any) {
       clientId: githubClientId,
       scopes: ['read:user', 'user:email'],
       redirectUri: githubRedirectUri,
+      usePKCE: false,
     },
     githubDiscovery
   );
-
-  useEffect(() => {
+useEffect(() => {
+  const handleGitHubResponse = async () => {
     if (githubResponse?.type === 'success' && githubResponse.params?.code) {
-      const code = githubResponse.params.code;
+      try {
+        const code = githubResponse.params.code;
+        console.log('GitHub auth code:', code);
 
-      // Normally, you would exchange this code for an access token via your backend
-      const githubUser = { name: 'GitHub User', code };
-      login(githubUser);
-      navigation.replace('Home');
+        const res = await fetch(`${BACKEND_BASE_URL}/api/users/auth/github`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.log('GitHub backend error:', res.status, errorText);
+          return;
+        }
+
+        const userFromBackend = await res.json();
+        console.log('GitHub user from backend:', userFromBackend);
+
+        await login(userFromBackend);
+        navigation.replace('Home');
+      } catch (error) {
+        console.log('GitHub login error:', error);
+      }
     }
-  }, [githubResponse]);
+  };
+
+  handleGitHubResponse();
+}, [githubResponse]);
+
 
   // --- Sign out function ---
   const handleSignOut = async () => {
