@@ -1,38 +1,51 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 
-export default function CreatePoll(){
-    const [question, setQuestion] = useState('');
-    const [options, setOptions] = useState('');
-    const [category, setCategory] = useState('');
-    const [endsAt, setEndsAt] = useState(''); // based on some stuff Im working on for entities in the backend
+const API_BASE = 'https://betsocial-fde6ef886274.herokuapp.com';
 
-    const handleCreatePoll = async () => {
+export default function CreatePoll() {
+  const [question, setQuestion] = useState('');
+  const [options, setOptions] = useState('');
+  const [category, setCategory] = useState('');
+  const [endsAt, setEndsAt] = useState('');
+
+  const handleCreatePoll = async () => {
     if (!question || !options || !category || !endsAt) {
       Alert.alert('Error', 'Please fill out all fields.');
       return;
     }
 
+    const endsAtIso = endsAt.endsWith('Z') ? endsAt : `${endsAt}Z`;
+
     try {
-      const response = await fetch('/api/polls', {
+      const response = await fetch(`${API_BASE}/api/polls`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question,
           options: options.split(',').map(opt => opt.trim()),
           category,
-          endsAt
+          endsAt: endsAtIso,
+          status: 'PENDING',
         }),
       });
 
       if (response.ok) {
         Alert.alert('Success', 'Poll created successfully!');
-      } else {
+        setQuestion('');
+        setOptions('');
+        setCategory('');
+        setEndsAt('');
+      } 
+      else {
+        const text = await response.text();
+        console.log('Create poll error body:', text);
         Alert.alert('Error', 'Failed to create poll.');
       }
-    } catch (error) {
+    } 
+    catch (error) {
+      console.error('Create poll error:', error);
       Alert.alert('Error', 'Something went wrong.');
-      console.error(error);
     }
   };
 
