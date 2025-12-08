@@ -119,20 +119,46 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw error;
     }
   };
+const login = async (authData: any) => {
+  setIsLoading(true);
+  try {
+    let userData: User;
 
-  const login = async (googleUser: any) => {
-    setIsLoading(true);
-    try {
-      const userData = await findOrCreateUser(googleUser);
+    // 1) GitHub login: backend returns { id, email, ..., token }
+    if (authData && 'token' in authData) {
+      const { token, ...rest } = authData;
+      console.log('GitHub login user from backend:', rest);
+
+      userData = rest as User;
       setUser(userData);
       await AsyncStorage.setItem('@user', JSON.stringify(userData));
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
+      await AsyncStorage.setItem('@token', token);
+      return;
     }
-  };
+
+    // 2) Already a backend user object (has obrobucks, created_at, etc.)
+    if (authData && 'obrobucks' in authData && 'created_at' in authData) {
+      console.log('Login with existing backend user object:', authData);
+      userData = authData as User;
+    } else {
+      // 3) Google raw profile -> find or create via backend
+      console.log('Google login raw googleUser:', authData);
+      userData = await findOrCreateUser(authData);
+      console.log('User from backend after Google login:', userData);
+    }
+
+    setUser(userData);
+    await AsyncStorage.setItem('@user', JSON.stringify(userData));
+    // optional: clear any stale token for Google-only auth
+    await AsyncStorage.removeItem('@token');
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const logout = async () => {
     try {
