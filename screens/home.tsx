@@ -1,5 +1,5 @@
-import React , { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, TextInput } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, TextInput, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,12 +35,96 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
 
 const API_BASE = 'https://betsocial-fde6ef886274.herokuapp.com';
 
-type PollCardProps = { poll: Poll };
+type PollCardProps = { 
+  poll: Poll;
+  onBetPlaced: () => void;
+};
 
-function PollCard({ poll }: PollCardProps) {
+function PollCard({ poll, onBetPlaced }: PollCardProps) {
+  const { user, refreshUser } = useUser();
   const [betAmount, setBetAmount] = useState('');
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [pollStats, setPollStats] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
-  const optionPercents: (string | number)[] = poll.options.map(() => '50%');
+  // Fetch poll betting stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/betting/stats/${poll.id}`);
+        const data = await res.json();
+        setPollStats(data);
+      } catch (e) {
+        console.error('Error fetching poll stats:', e);
+      }
+    };
+    fetchStats();
+  }, [poll.id]);
+
+  const placeBet = async (option: string) => {
+    if (!user || !user.id) {
+      Alert.alert('Error', 'Please log in to place a bet.');
+      return;
+    }
+
+    const amount = parseInt(betAmount);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid bet amount.');
+      return;
+    }
+
+    if ((user.obrobucks || 0) < amount) {
+      Alert.alert('Insufficient Funds', `You need ${amount} ObroBucks but only have ${user.obrobucks || 0}.`);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/betting/place`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          pollId: poll.id,
+          optionText: option,
+          amount: amount
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to place bet');
+      }
+
+      Alert.alert(
+        '🎉 Bet Placed!',
+        `You bet ${amount} ObroBucks on "${option}"\n\nPotential Payout: ${data.potentialPayout} ObroBucks\nNew Balance: ${data.newBalance} ObroBucks`
+      );
+
+      setBetAmount('');
+      setSelectedOption(null);
+      await refreshUser();
+      onBetPlaced(); // Refresh polls
+
+    } catch (error: any) {
+      console.error('Error placing bet:', error);
+      Alert.alert('Error', error.message || 'Failed to place bet.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculatePotentialPayout = (option: string) => {
+    if (!pollStats || !betAmount) return 0;
+    
+    const amount = parseInt(betAmount);
+    if (isNaN(amount) || amount <= 0) return 0;
+
+    // Simple 2x payout for now
+    return amount * 2;
+  };
 
   const displayName = poll.created_by_username || 'Anonymous';
   const handle =
@@ -74,52 +158,64 @@ function PollCard({ poll }: PollCardProps) {
 
       <Text style={styles.pollQuestion}>{poll.question}</Text>
 
-      {poll.options.map((opt, idx) => (
-        <View style={styles.pollOption} key={idx}>
-          <View style={styles.optionContent}>
-            <Text style={styles.optionText}>{opt}</Text>
-            <Text style={styles.optionPercent}>{optionPercents[idx]}</Text>
-          </View>
-          <View style={[styles.progressBar, { width: optionPercents[idx] as any }]} />
-          <Text style={styles.betAmount}>$0 bet</Text>
-        </View>
-      ))}
+      {poll.options.map((opt, idx) => {
+        const optStats = pollStats?.optionStats?.[opt];
+        const percentage = optStats?.percentage || 0;
+        const totalBet = optStats?.total || 0;
+        const isSelected = selectedOption === opt;
+
+        return (
+          <TouchableOpacity
+            key={idx}
+            style={[styles.pollOption, isSelected && styles.pollOptionSelected]}
+            onPress={() => setSelectedOption(opt)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.optionContent}>
+              <Text style={styles.optionText}>{opt}</Text>
+              <Text style={styles.optionPercent}>{percentage.toFixed(1)}%</Text>
+            </View>
+            <View style={[styles.progressBar, { width: `${percentage}%` }]} />
+            <Text style={styles.betAmount}>${totalBet} bet</Text>
+          </TouchableOpacity>
+        );
+      })}
 
       <View style={styles.betSection}>
         <TextInput
           style={styles.betInput}
           placeholder="Bet amount"
           placeholderTextColor="#999"
+          keyboardType="numeric"
           value={betAmount}
           onChangeText={setBetAmount}
         />
         <TouchableOpacity
-          style={styles.yesButton}
-          onPress={() => console.log('Bet YES on poll', poll.id)}
+          style={[styles.placeBetButton, (!selectedOption || loading) && styles.buttonDisabled]}
+          onPress={() => selectedOption && placeBet(selectedOption)}
+          disabled={!selectedOption || loading}
         >
-          <Text style={styles.buttonText}>Bet YES</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.noButton}
-          onPress={() => console.log('Bet NO on poll', poll.id)}
-        >
-          <Text style={styles.buttonText}>Bet NO</Text>
+          <Text style={styles.buttonText}>{loading ? 'Placing...' : 'Place Bet'}</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.potentialPayout}>Potential payout: $0</Text>
+      {selectedOption && betAmount && (
+        <Text style={styles.potentialPayout}>
+          Potential payout: {calculatePotentialPayout(selectedOption)} ObroBucks
+        </Text>
+      )}
 
       <View style={styles.postFooter}>
         <View style={styles.footerItem}>
-          <Ionicons name="heart-outline" size={18} color="#666" />
+          <Ionicons name="heart-outline" size={18} color="#999" />
           <Text style={styles.footerCount}>0</Text>
         </View>
         <View style={styles.footerItem}>
-          <Ionicons name="chatbubble-outline" size={18} color="#666" />
+          <Ionicons name="chatbubble-outline" size={18} color="#999" />
           <Text style={styles.footerCount}>0</Text>
         </View>
         <View style={styles.footerItem}>
-          <Ionicons name="share-outline" size={18} color="#666" />
+          <Ionicons name="share-outline" size={18} color="#999" />
           <Text style={styles.footerCount}>0</Text>
         </View>
         <Text style={styles.totalPool}>Total Pool: ${poll.total_bets}</Text>
@@ -137,20 +233,20 @@ export default function Home() {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loadingPolls, setLoadingPolls] = useState(false);
 
-  useEffect(() => {
-    const loadPolls = async () => {
-      try {
-        setLoadingPolls(true);
-        const res = await fetch(`${API_BASE}/api/polls`);
-        const data: Poll[] = await res.json();
-        setPolls(data);
-      } catch (e) {
-        console.error('Error loading polls', e);
-      } finally {
-        setLoadingPolls(false);
-      }
-    };
+  const loadPolls = async () => {
+    try {
+      setLoadingPolls(true);
+      const res = await fetch(`${API_BASE}/api/polls`);
+      const data: Poll[] = await res.json();
+      setPolls(data);
+    } catch (e) {
+      console.error('Error loading polls', e);
+    } finally {
+      setLoadingPolls(false);
+    }
+  };
 
+  useEffect(() => {
     loadPolls();
   }, []);
 
@@ -166,11 +262,11 @@ export default function Home() {
             <Ionicons
               name="wallet"
               size={14}
-              color="#fff"
+              color="#7C6FD8"
               style={styles.balanceIcon}
             />
             <Text style={styles.balanceText}>
-              {user?.obrobucks || 0} ObroBucks
+              {user?.obrobucks || 0}
             </Text>
           </View>
           <TouchableOpacity
@@ -205,7 +301,9 @@ export default function Home() {
           style={styles.inactiveTab}
           onPress={() => navigation.navigate('Gambling')}
         >
-          <Text style={styles.inactiveTabText}>🎰 Casino</Text>
+          <View style={styles.tabContent}>
+            <Text style={styles.inactiveTabText}>🎰 Casino</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -269,35 +367,19 @@ export default function Home() {
         {/* Feed */}
         <View style={[styles.feed, isWide && styles.feedWide]}>
           {loadingPolls && (
-            <Text style={{ color: '#fff', marginBottom: 12 }}>Loading polls…</Text>
+            <Text style={{ color: '#666', marginBottom: 12 }}>Loading polls…</Text>
           )}
 
           {!loadingPolls && polls.length === 0 && (
-            <Text style={{ color: '#fff', marginBottom: 12 }}>
+            <Text style={{ color: '#666', marginBottom: 12 }}>
               No polls yet. Create one!
             </Text>
           )}
           
           {!loadingPolls &&
-            polls.map((poll) => <PollCard key={poll.id} poll={poll} />)}
-          <View style={styles.postCard}>
-            <View style={styles.postHeader}>
-              <View style={styles.userInfo}>
-                <View style={[styles.avatar, styles.avatarOrange]}>
-                  <Text style={styles.avatarText}>MR</Text>
-                </View>
-                <View>
-                  <Text style={styles.username}>Mike Rodriguez</Text>
-                  <Text style={styles.handle}>@mike_sports · 4h ago</Text>
-                </View>
-              </View>
-              <TouchableOpacity>
-                <Text style={styles.moreButton}>⋯</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.pollQuestion}>Superbowl this year? 🏈</Text>
-          </View>
+            polls.map((poll) => (
+              <PollCard key={poll.id} poll={poll} onBetPlaced={loadPolls} />
+            ))}
         </View>
       </View>
     </ScrollView>
@@ -595,6 +677,12 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     position: 'relative',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  pollOptionSelected: {
+    borderColor: '#7C6FD8',
+    backgroundColor: '#f0f0ff',
   },
   optionContent: {
     flexDirection: 'row',
@@ -641,27 +729,19 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5E5',
     fontWeight: '600',
   },
-  yesButton: {
-    backgroundColor: '#2ecc71',
+  placeBetButton: {
+    backgroundColor: '#7C6FD8',
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     borderRadius: 12,
-    shadowColor: '#2ecc71',
+    shadowColor: '#7C6FD8',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
   },
-  noButton: {
-    backgroundColor: '#e74c3c',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    shadowColor: '#e74c3c',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+  buttonDisabled: {
+    opacity: 0.4,
   },
   buttonText: {
     color: '#fff',
@@ -669,10 +749,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   potentialPayout: {
-    fontSize: 13,
-    color: '#999',
+    fontSize: 14,
+    color: '#2ecc71',
     marginBottom: 16,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   postFooter: {
     flexDirection: 'row',
