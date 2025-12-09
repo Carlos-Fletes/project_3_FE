@@ -1,13 +1,16 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import Profile from '../screens/profile';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Mock AsyncStorage so anything in UserContext that uses it won't crash
 jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(() => Promise.resolve(JSON.stringify({ name: 'Jane', username: '@jane' }))),
+  getItem: jest.fn(),
+  setItem: jest.fn(),
   removeItem: jest.fn(),
+  clear: jest.fn(),
 }));
 
+// Mock navigation used in Profile
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     navigate: jest.fn(),
@@ -15,18 +18,40 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
+// Mock useUser so we don't need a real UserProvider
+const mockLogout = jest.fn();
+
+jest.mock('../contexts/UserContext', () => ({
+  useUser: () => ({
+    user: {
+      name: 'Jane',
+      username: 'jane',
+      obrobucks: 123,
+      bio: 'Test bio',
+      profile_picture_url: '',
+    },
+    logout: mockLogout,
+  }),
+}));
+
 describe('Profile Screen', () => {
-  it('loads and displays stored user data', async () => {
-    const { findByText } = render(<Profile />);
-    expect(await findByText('Jane')).toBeTruthy();
-    expect(await findByText('@jane')).toBeTruthy();
+  beforeEach(() => {
+    mockLogout.mockClear();
   });
 
-  it('calls AsyncStorage.removeItem on logout', async () => {
+  it('loads and displays stored user data', () => {
     const { getByText } = render(<Profile />);
+
+    // From the mocked user above
+    expect(getByText('Jane')).toBeTruthy();
+    expect(getByText('@jane')).toBeTruthy();
+  });
+
+  it('calls logout when "Log Out" is pressed', () => {
+    const { getByText } = render(<Profile />);
+
     fireEvent.press(getByText('Log Out'));
-    await waitFor(() => {
-      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('@user');
-    });
+
+    expect(mockLogout).toHaveBeenCalled();
   });
 });
