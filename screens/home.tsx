@@ -307,12 +307,24 @@ function PollCard({ poll, onBetPlaced, onPollDeleted }: PollCardProps) {
         {showMenu && isCreator && (
           <View style={styles.menuDropdown}>
             {!isClosed && (
-              <TouchableOpacity style={styles.menuItem} onPress={resolvePoll}>
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={() => {
+                  setShowMenu(false);
+                  resolvePoll();
+                }}
+              >
                 <Ionicons name="checkmark-circle-outline" size={18} color="#2ecc71" />
                 <Text style={styles.menuText}>Resolve Poll</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.menuItem} onPress={deletePoll}>
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => {
+                setShowMenu(false);
+                deletePoll();
+              }}
+            >
               <Ionicons name="trash-outline" size={18} color="#e74c3c" />
               <Text style={[styles.menuText, { color: '#e74c3c' }]}>Delete Poll</Text>
             </TouchableOpacity>
