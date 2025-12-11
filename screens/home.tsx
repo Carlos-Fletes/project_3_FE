@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, TextInput, Alert, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,12 +35,40 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
 
 const API_BASE = 'https://betsocial-fde6ef886274.herokuapp.com';
 
+// Cross-platform alert functions
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
+
+const showConfirm = (title: string, message: string, onConfirm: () => void) => {
+  if (Platform.OS === 'web') {
+    if (window.confirm(`${title}\n\n${message}`)) {
+      onConfirm();
+    }
+  } else {
+    Alert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'OK', onPress: onConfirm }
+    ]);
+  }
+};
+
 // Timer Component
-function PollTimer({ endsAt }: { endsAt: string | null }) {
+function PollTimer({ endsAt, pollStatus }: { endsAt: string | null, pollStatus: PollStatus }) {
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
     if (!endsAt) return;
+
+    // If poll is closed, immediately show "Poll Ended"
+    if (pollStatus === 'CLOSED') {
+      setTimeLeft('Poll Ended');
+      return;
+    }
 
     const updateTimer = () => {
       const now = new Date().getTime();
@@ -72,7 +100,7 @@ function PollTimer({ endsAt }: { endsAt: string | null }) {
     const interval = setInterval(updateTimer, 1000);
 
     return () => clearInterval(interval);
-  }, [endsAt]);
+  }, [endsAt, pollStatus]);
 
   if (!endsAt) return null;
 
@@ -131,18 +159,18 @@ function PollCard({ poll, onBetPlaced, onPollDeleted }: PollCardProps) {
 
   const placeBet = async (option: string) => {
     if (!user || !user.id) {
-      Alert.alert('Error', 'Please log in to place a bet.');
+      showAlert('Error', 'Please log in to place a bet.');
       return;
     }
 
     const amount = parseInt(betAmount);
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid bet amount.');
+      showAlert('Invalid Amount', 'Please enter a valid bet amount.');
       return;
     }
 
     if ((user.obrobucks || 0) < amount) {
-      Alert.alert('Insufficient Funds', `You need ${amount} ObroBucks but only have ${user.obrobucks || 0}.`);
+      showAlert('Insufficient Funds', `You need ${amount} ObroBucks but only have ${user.obrobucks || 0}.`);
       return;
     }
 
@@ -171,14 +199,14 @@ function PollCard({ poll, onBetPlaced, onPollDeleted }: PollCardProps) {
       await refreshUser();
       onBetPlaced();
 
-      Alert.alert(
+      showAlert(
         '🎉 Bet Placed!',
         `You bet ${amount} ObroBucks on "${option}"\n\nPotential Payout: ${data.potentialPayout} ObroBucks\nNew Balance: ${data.newBalance} ObroBucks`
       );
 
     } catch (error: any) {
       console.error('Error placing bet:', error);
-      Alert.alert('Error', error.message || 'Failed to place bet.');
+      showAlert('Error', error.message || 'Failed to place bet.');
     } finally {
       setLoading(false);
     }
@@ -186,77 +214,68 @@ function PollCard({ poll, onBetPlaced, onPollDeleted }: PollCardProps) {
 
   const resolvePoll = async () => {
     if (!selectedOption) {
-      Alert.alert('Select Winner', 'Please select the winning option first.');
+      showAlert('Select Winner', 'Please select the winning option first.');
       return;
     }
 
-    Alert.alert(
+    showConfirm(
       'Confirm Winner',
       `Declare "${selectedOption}" as the winner? This will close the poll and pay out winners.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: async () => {
-            try {
-              const response = await fetch(`${API_BASE}/api/polls/${poll.id}/resolve`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ winningOption: selectedOption })
-              });
+      async () => {
+        try {
+          console.log('🔄 Resolving poll...', { pollId: poll.id, winningOption: selectedOption });
+          
+          const response = await fetch(`${API_BASE}/api/polls/${poll.id}/resolve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ winningOption: selectedOption })
+          });
 
-              const data = await response.json();
+          const data = await response.json();
+          console.log('✅ Resolve response:', data);
 
-              if (!response.ok) {
-                throw new Error(data.error || 'Failed to resolve poll');
-              }
-
-              Alert.alert(
-                '✅ Poll Resolved!',
-                `Winner: ${selectedOption}\nWinners paid: ${data.winnersCount}\nTotal payout: ${data.totalPaidOut} ObroBucks`
-              );
-
-              onBetPlaced(); // Refresh polls
-
-            } catch (error: any) {
-              console.error('Error resolving poll:', error);
-              Alert.alert('Error', error.message || 'Failed to resolve poll.');
-            }
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to resolve poll');
           }
+
+          showAlert(
+            '✅ Poll Resolved!',
+            `Winner: ${selectedOption}\nWinners paid: ${data.winnersCount}\nTotal payout: ${data.totalPaidOut} ObroBucks`
+          );
+
+          await refreshUser();
+          onBetPlaced();
+
+        } catch (error: any) {
+          console.error('❌ Error resolving poll:', error);
+          showAlert('Error', error.message || 'Failed to resolve poll');
         }
-      ]
+      }
     );
   };
 
   const deletePoll = async () => {
-    Alert.alert(
+    showConfirm(
       'Delete Poll',
       'Are you sure you want to delete this poll? This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await fetch(`${API_BASE}/api/polls/${poll.id}`, {
-                method: 'DELETE'
-              });
+      async () => {
+        try {
+          const response = await fetch(`${API_BASE}/api/polls/${poll.id}`, {
+            method: 'DELETE'
+          });
 
-              if (!response.ok) {
-                throw new Error('Failed to delete poll');
-              }
-
-              Alert.alert('Success', 'Poll deleted successfully');
-              onPollDeleted();
-
-            } catch (error: any) {
-              console.error('Error deleting poll:', error);
-              Alert.alert('Error', error.message || 'Failed to delete poll.');
-            }
+          if (!response.ok) {
+            throw new Error('Failed to delete poll');
           }
+
+          showAlert('Success', 'Poll deleted successfully');
+          onPollDeleted();
+
+        } catch (error: any) {
+          console.error('Error deleting poll:', error);
+          showAlert('Error', error.message || 'Failed to delete poll');
         }
-      ]
+      }
     );
   };
 
@@ -299,45 +318,48 @@ function PollCard({ poll, onBetPlaced, onPollDeleted }: PollCardProps) {
         </View>
         
         {isCreator && (
-          <TouchableOpacity onPress={() => setShowMenu(!showMenu)}>
+          <TouchableOpacity 
+            onPress={() => setShowMenu(!showMenu)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Text style={styles.moreButton}>⋯</Text>
           </TouchableOpacity>
         )}
-        
-        {showMenu && isCreator && (
-          <View style={styles.menuDropdown}>
-            {!isClosed && (
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={() => {
-                  setShowMenu(false);
-                  resolvePoll();
-                }}
-              >
-                <Ionicons name="checkmark-circle-outline" size={18} color="#2ecc71" />
-                <Text style={styles.menuText}>Resolve Poll</Text>
-              </TouchableOpacity>
-            )}
+      </View>
+
+      {showMenu && isCreator && (
+        <View style={styles.menuDropdownOutside}>
+          {!isClosed && (
             <TouchableOpacity 
-              style={styles.menuItem} 
+              style={styles.menuItemButton} 
+              activeOpacity={0.6}
               onPress={() => {
                 setShowMenu(false);
-                deletePoll();
+                setTimeout(() => resolvePoll(), 100);
               }}
             >
-              <Ionicons name="trash-outline" size={18} color="#e74c3c" />
-              <Text style={[styles.menuText, { color: '#e74c3c' }]}>Delete Poll</Text>
+              <Ionicons name="checkmark-circle-outline" size={18} color="#2ecc71" />
+              <Text style={styles.menuText}>Resolve Poll</Text>
             </TouchableOpacity>
-          </View>
-        )}
-      </View>
+          )}
+          <TouchableOpacity 
+            style={styles.menuItemButton} 
+            activeOpacity={0.6}
+            onPress={() => {
+              setShowMenu(false);
+              setTimeout(() => deletePoll(), 100);
+            }}
+          >
+            <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+            <Text style={[styles.menuText, { color: '#e74c3c' }]}>Delete Poll</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Text style={styles.pollQuestion}>{poll.question}</Text>
 
-      {/* Poll Timer */}
-      <PollTimer endsAt={poll.ends_at} />
+      <PollTimer endsAt={poll.ends_at} pollStatus={poll.status} />
 
-      {/* Closed Poll Banner */}
       {isClosed && winner?.resolved && (
         <View style={styles.closedBanner}>
           <Ionicons name="trophy" size={16} color="#FFD700" />
@@ -451,7 +473,6 @@ export default function Home() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header - same as before */}
       <View style={styles.header}>
         <View style={styles.logoSection}>
           <Text style={styles.logo}>BetSocial</Text>
@@ -469,7 +490,6 @@ export default function Home() {
         </View>
       </View>
 
-      {/* Navigation Tabs - same as before */}
       <View style={styles.navTabs}>
         <TouchableOpacity style={styles.activeTab}>
           <View style={styles.tabContent}>
@@ -490,7 +510,6 @@ export default function Home() {
         </TouchableOpacity>
       </View>
 
-      {/* Main Layout - same as before with sidebar */}
       <View style={[styles.mainLayout, isWide && styles.rowLayout]}>
         <View style={[styles.sidebar, isWide && styles.sidebarWide]}>
           <View style={styles.card}>
@@ -540,7 +559,6 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Feed */}
         <View style={[styles.feed, isWide && styles.feedWide]}>
           {loadingPolls && <Text style={{ color: '#666', marginBottom: 12 }}>Loading polls…</Text>}
           {!loadingPolls && polls.length === 0 && (
@@ -556,7 +574,6 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  // ... keep all your existing styles from before ...
   container: { flex: 1, backgroundColor: '#f5f5f7' },
   content: { padding: 0 },
   header: {
@@ -717,13 +734,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarOrange: { backgroundColor: '#FFB366' },
   avatarText: { color: '#fff', fontWeight: '900', fontSize: 16 },
   username: { fontWeight: '900', fontSize: 16, color: '#333' },
   handle: { color: '#999', fontSize: 13, fontWeight: '600' },
   moreButton: { fontSize: 24, color: '#999', fontWeight: '700' },
   
-  // NEW STYLES for timer, menu, and winner
   timerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -740,27 +755,27 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '600',
   },
-  menuDropdown: {
-    position: 'absolute',
-    right: 0,
-    top: 30,
+  menuDropdownOutside: {
+    alignSelf: 'flex-end',
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 8,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 10,
     minWidth: 160,
-    zIndex: 1000,
   },
-  menuItem: {
+  menuItemButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     padding: 12,
     borderRadius: 8,
+    backgroundColor: '#f9f9f9',
+    marginBottom: 4,
   },
   menuText: {
     fontSize: 14,
