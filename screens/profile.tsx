@@ -1,5 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +17,7 @@ type RootStackParamList = {
   SignIn: undefined;
   Home: undefined;
   Profile: undefined;
+  EditProfile: undefined;
 };
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<
@@ -16,10 +25,12 @@ type ProfileScreenNavigationProp = NativeStackNavigationProp<
   'Profile'
 >;
 
+const API_BASE_URL = 'https://betsocial-fde6ef886274.herokuapp.com';
+
 export default function Profile() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { user, logout } = useUser();
-   console.log('Profile user from context:', user);
+  console.log('Profile user from context:', user);
 
   const handleLogout = async () => {
     try {
@@ -33,11 +44,62 @@ export default function Profile() {
     }
   };
 
+  const handleDeleteAccount = () => {
+    if (!user) return;
+
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and data.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await fetch(
+                `${API_BASE_URL}/api/users/${user.id}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                }
+              );
+
+              if (!res.ok) {
+                console.log('Delete failed with status', res.status);
+                Alert.alert('Error', 'Could not delete your account.');
+                return;
+              }
+
+              await logout();
+
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'SignIn' }],
+              });
+            } catch (error) {
+              console.log('Error deleting account:', error);
+              Alert.alert(
+                'Error',
+                'Something went wrong deleting your account.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Home')}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
@@ -49,7 +111,11 @@ export default function Profile() {
         {/* Profile Picture */}
         <View style={styles.avatarContainer}>
           <Image
-            source={{ uri: user?.profile_picture_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' }}
+            source={{
+              uri:
+                user?.profile_picture_url ||
+                'https://cdn-icons-png.flaticon.com/512/847/847969.png',
+            }}
             style={styles.avatar}
           />
           <View style={styles.statusBadge}>
@@ -62,9 +128,7 @@ export default function Profile() {
         <Text style={styles.username}>@{user?.username || 'loading'}</Text>
 
         {/* Bio */}
-        {user?.bio && (
-          <Text style={styles.bio}>{user.bio}</Text>
-        )}
+        {user?.bio && <Text style={styles.bio}>{user.bio}</Text>}
       </View>
 
       {/* Stats Cards */}
@@ -98,7 +162,7 @@ export default function Profile() {
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate('EditProfile' as any)}
+          onPress={() => navigation.navigate('EditProfile')}
         >
           <Ionicons name="create-outline" size={20} color="#fff" />
           <Text style={styles.buttonText}>Edit Profile</Text>
@@ -110,6 +174,14 @@ export default function Profile() {
         >
           <Ionicons name="home-outline" size={20} color="#fff" />
           <Text style={styles.buttonText}>Back to Home</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.deleteButton]}
+          onPress={handleDeleteAccount}
+        >
+          <Ionicons name="trash-outline" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Delete Account</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -279,6 +351,10 @@ const styles = StyleSheet.create({
   logoutButton: {
     backgroundColor: '#e74c3c',
     shadowColor: '#e74c3c',
+  },
+  deleteButton: {
+    backgroundColor: '#c0392b', // slightly deeper red than logout
+    shadowColor: '#c0392b',
   },
   buttonText: {
     color: '#fff',
