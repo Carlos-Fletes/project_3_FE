@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Button, StyleSheet, Text, View } from 'react-native';
+import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
@@ -27,8 +27,6 @@ type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-//const BACKEND_BASE_URL = 'http://10.0.2.2:8080'; local test
-
 function SignInScreen({ navigation }: any) {
   const { user, login, logout, isLoading } = useUser();
 
@@ -47,21 +45,17 @@ function SignInScreen({ navigation }: any) {
   }, [googleResponse]);
 
   const fetchGoogleUser = async (token: string) => {
-  const res = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const googleUser = await res.json();
-  console.log('googleUser.id =', googleUser.id, 'email =', googleUser.email);
-  await login(googleUser);
-  navigation.replace('Home');
-};
+    const res = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const googleUser = await res.json();
+    await login(googleUser);
+    navigation.replace('Home');
+  };
 
   // --- GitHub OAuth ---
-  //for this to work need to accept the pr in the backend repo
   const githubClientId = 'Ov23li1MaKxzTImvJ2lK';
   const githubRedirectUri = makeRedirectUri();
-
-  console.log('GitHub Redirect URI:', githubRedirectUri);
 
   const githubDiscovery = {
     authorizationEndpoint: 'https://github.com/login/oauth/authorize',
@@ -79,38 +73,34 @@ function SignInScreen({ navigation }: any) {
 
   useEffect(() => {
     if (githubResponse?.type === 'success' && githubResponse.params?.code) {
-      const code = githubResponse.params.code;
-      exchangeGitHubCodeForToken(code);
+      exchangeGitHubCodeForToken(githubResponse.params.code);
     }
   }, [githubResponse]);
 
   const exchangeGitHubCodeForToken = async (code: string) => {
     try {
-      // Exchange the code with your backend for access token and user info
-      //`${BACKEND_BASE_URL}/api/users/auth/github` local test
-      const response = await fetch('https://betsocial-fde6ef886274.herokuapp.com/api/users/auth/github', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code }),
-      });
+      const response = await fetch(
+        'https://betsocial-fde6ef886274.herokuapp.com/api/users/auth/github',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
-        // data should contain: user info and JWT token from backend
         await login(data);
         navigation.replace('Home');
       } else {
         const errorText = await response.text();
-        console.error('GitHub token exchange failed:', response.status, errorText);
+        console.error('GitHub token exchange failed:', errorText);
       }
     } catch (error) {
       console.log('GitHub token exchange error:', error);
     }
   };
 
-  // --- Sign out function ---
   const handleSignOut = async () => {
     try {
       await logout();
@@ -120,7 +110,6 @@ function SignInScreen({ navigation }: any) {
     }
   };
 
-  // Auto-navigate if already logged in
   useEffect(() => {
     if (user && !isLoading) {
       navigation.replace('Home');
@@ -138,10 +127,22 @@ function SignInScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <Text>{user ? `Hello, ${user.name}` : 'Not signed in'}</Text>
-      <Button title="Sign in with Google" onPress={() => googlePromptAsync()} />
-      <Button title="Sign in with GitHub" onPress={() => githubPromptAsync()} />
-      {user && <Button title="Sign out" onPress={handleSignOut} />}
+      <Text style={styles.title}>{user ? `Hello, ${user.name}` : 'Welcome'}</Text>
+
+      <TouchableOpacity style={styles.button} onPress={() => googlePromptAsync()}>
+        <Text style={styles.buttonText}>Sign in with Google</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.button} onPress={() => githubPromptAsync()}>
+        <Text style={styles.buttonText}>Sign in with GitHub</Text>
+      </TouchableOpacity>
+
+      {user && (
+        <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleSignOut}>
+          <Text style={styles.buttonText}>Sign Out</Text>
+        </TouchableOpacity>
+      )}
+
       <StatusBar style="auto" />
     </View>
   );
@@ -152,36 +153,12 @@ export default function App() {
     <UserProvider>
       <NavigationContainer>
         <Stack.Navigator initialRouteName="SignIn">
-          <Stack.Screen
-            name="SignIn"
-            component={SignInScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            name="Home" 
-            component={Home}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            name="Profile" 
-            component={Profile}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            name="EditProfile" 
-            component={EditProfile} 
-            options={{ title: 'Edit Profile' }} 
-          />
-          <Stack.Screen 
-            name="Gambling" 
-            component={Gambling}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            name="CreatePoll" 
-            component={CreatePoll}
-            options={{ title: 'Create Poll' }} 
-          />
+          <Stack.Screen name="SignIn" component={SignInScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Home" component={Home} options={{ headerShown: false }} />
+          <Stack.Screen name="Profile" component={Profile} options={{ headerShown: false }} />
+          <Stack.Screen name="EditProfile" component={EditProfile} options={{ title: 'Edit Profile' }} />
+          <Stack.Screen name="Gambling" component={Gambling} options={{ headerShown: false }} />
+          <Stack.Screen name="CreatePoll" component={CreatePoll} options={{ title: 'Create Poll' }} />
         </Stack.Navigator>
       </NavigationContainer>
     </UserProvider>
@@ -191,8 +168,43 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f7',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+
+  title: {
+    fontSize: 28,
+    fontWeight: '900',
+    marginBottom: 40,
+    color: '#333',
+  },
+
+  button: {
+    width: '100%',
+    backgroundColor: '#7C6FD8',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 15,
+
+    shadowColor: '#7C6FD8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+
+  logoutButton: {
+    backgroundColor: '#e74c3c',
+    shadowColor: '#e74c3c',
+  },
+
+  buttonText: {
+    color: '#fff',
+    fontWeight: '900',
+    fontSize: 16,
+    letterSpacing: 0.5,
   },
 });

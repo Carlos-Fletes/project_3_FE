@@ -9,6 +9,7 @@ type RootStackParamList = {
   SignIn: undefined;
   Home: undefined;
   Profile: undefined;
+  EditProfile: undefined;
 };
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<
@@ -30,6 +31,7 @@ type Bet = {
   pollStatus: string;
   pollEndsAt: string | null;
 };
+
 
 export default function Profile() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
@@ -76,12 +78,62 @@ export default function Profile() {
   const totalWinnings = wonBets.reduce((sum, bet) => sum + (bet.potentialPayout || 0), 0);
   const totalLosses = lostBets.reduce((sum, bet) => sum + bet.amount, 0);
   const netProfit = totalWinnings - totalLosses;
+  const handleDeleteAccount = () => {
+    if (!user) return;
+
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and data.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await fetch(
+                `${API_BASE_URL}/api/users/${user.id}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                }
+              );
+
+              if (!res.ok) {
+                console.log('Delete failed with status', res.status);
+                Alert.alert('Error', 'Could not delete your account.');
+                return;
+              }
+
+              await logout();
+
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'SignIn' }],
+              });
+            } catch (error) {
+              console.log('Error deleting account:', error);
+              Alert.alert(
+                'Error',
+                'Something went wrong deleting your account.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Home')}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
@@ -92,7 +144,11 @@ export default function Profile() {
       <View style={styles.profileCard}>
         <View style={styles.avatarContainer}>
           <Image
-            source={{ uri: user?.profile_picture_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' }}
+            source={{
+              uri:
+                user?.profile_picture_url ||
+                'https://cdn-icons-png.flaticon.com/512/847/847969.png',
+            }}
             style={styles.avatar}
           />
           <View style={styles.statusBadge}>
@@ -103,9 +159,8 @@ export default function Profile() {
         <Text style={styles.name}>{user?.name || 'Loading...'}</Text>
         <Text style={styles.username}>@{user?.username || 'loading'}</Text>
 
-        {user?.bio && (
-          <Text style={styles.bio}>{user.bio}</Text>
-        )}
+        {/* Bio */}
+        {user?.bio && <Text style={styles.bio}>{user.bio}</Text>}
       </View>
 
       {/* Stats Cards */}
@@ -236,7 +291,7 @@ export default function Profile() {
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate('EditProfile' as any)}
+          onPress={() => navigation.navigate('EditProfile')}
         >
           <Ionicons name="create-outline" size={20} color="#fff" />
           <Text style={styles.buttonText}>Edit Profile</Text>
@@ -248,6 +303,14 @@ export default function Profile() {
         >
           <Ionicons name="home-outline" size={20} color="#fff" />
           <Text style={styles.buttonText}>Back to Home</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.deleteButton]}
+          onPress={handleDeleteAccount}
+        >
+          <Ionicons name="trash-outline" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Delete Account</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -527,6 +590,10 @@ const styles = StyleSheet.create({
   logoutButton: {
     backgroundColor: '#e74c3c',
     shadowColor: '#e74c3c',
+  },
+  deleteButton: {
+    backgroundColor: '#c0392b', // slightly deeper red than logout
+    shadowColor: '#c0392b',
   },
   buttonText: {
     color: '#fff',
