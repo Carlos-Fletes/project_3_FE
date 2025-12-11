@@ -1,13 +1,5 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,12 +17,46 @@ type ProfileScreenNavigationProp = NativeStackNavigationProp<
   'Profile'
 >;
 
-const API_BASE_URL = 'https://betsocial-fde6ef886274.herokuapp.com';
+const API_BASE = 'https://betsocial-fde6ef886274.herokuapp.com';
+
+type Bet = {
+  id: number;
+  pollId: number;
+  optionText: string;
+  amount: number;
+  potentialPayout: number;
+  createdAt: string;
+  isWinner: boolean | null;
+  pollQuestion: string;
+  pollStatus: string;
+  pollEndsAt: string | null;
+};
+
 
 export default function Profile() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { user, logout } = useUser();
-  console.log('Profile user from context:', user);
+  const [bets, setBets] = useState<Bet[]>([]);
+  const [loadingBets, setLoadingBets] = useState(false);
+
+  useEffect(() => {
+    const loadBets = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setLoadingBets(true);
+        const res = await fetch(`${API_BASE}/api/betting/user/${user.id}`);
+        const data = await res.json();
+        setBets(data);
+      } catch (e) {
+        console.error('Error loading bets:', e);
+      } finally {
+        setLoadingBets(false);
+      }
+    };
+
+    loadBets();
+  }, [user?.id]);
 
   const handleLogout = async () => {
     try {
@@ -44,6 +70,14 @@ export default function Profile() {
     }
   };
 
+  const activeBets = bets.filter(bet => bet.pollStatus !== 'CLOSED');
+  const completedBets = bets.filter(bet => bet.pollStatus === 'CLOSED');
+  const wonBets = completedBets.filter(bet => bet.isWinner === true);
+  const lostBets = completedBets.filter(bet => bet.isWinner === false);
+
+  const totalWinnings = wonBets.reduce((sum, bet) => sum + (bet.potentialPayout || 0), 0);
+  const totalLosses = lostBets.reduce((sum, bet) => sum + bet.amount, 0);
+  const netProfit = totalWinnings - totalLosses;
   const handleDeleteAccount = () => {
     if (!user) return;
 
@@ -108,7 +142,6 @@ export default function Profile() {
 
       {/* Profile Card */}
       <View style={styles.profileCard}>
-        {/* Profile Picture */}
         <View style={styles.avatarContainer}>
           <Image
             source={{
@@ -123,7 +156,6 @@ export default function Profile() {
           </View>
         </View>
 
-        {/* Username and Info */}
         <Text style={styles.name}>{user?.name || 'Loading...'}</Text>
         <Text style={styles.username}>@{user?.username || 'loading'}</Text>
 
@@ -145,17 +177,114 @@ export default function Profile() {
           <View style={styles.statIconContainer}>
             <Ionicons name="trending-up" size={24} color="#2ecc71" />
           </View>
-          <Text style={styles.statValue}>68%</Text>
-          <Text style={styles.statLabel}>Win Rate</Text>
+          <Text style={[styles.statValue, netProfit >= 0 ? { color: '#2ecc71' } : { color: '#e74c3c' }]}>
+            {netProfit >= 0 ? '+' : ''}{netProfit}
+          </Text>
+          <Text style={styles.statLabel}>Net Profit</Text>
         </View>
 
         <View style={styles.statCard}>
           <View style={styles.statIconContainer}>
             <Ionicons name="stats-chart" size={24} color="#FFA500" />
           </View>
-          <Text style={styles.statValue}>32</Text>
+          <Text style={styles.statValue}>{bets.length}</Text>
           <Text style={styles.statLabel}>Total Bets</Text>
         </View>
+      </View>
+
+      {/* Bet History Section */}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>📊 Bet History</Text>
+
+        {loadingBets && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#7C6FD8" />
+          </View>
+        )}
+
+        {!loadingBets && bets.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="newspaper-outline" size={48} color="#999" />
+            <Text style={styles.emptyText}>No bets yet</Text>
+            <Text style={styles.emptySubtext}>Place your first bet to see it here!</Text>
+          </View>
+        )}
+
+        {!loadingBets && activeBets.length > 0 && (
+          <>
+            <Text style={styles.subsectionTitle}>Active Bets ({activeBets.length})</Text>
+            {activeBets.map((bet) => (
+              <View key={bet.id} style={styles.betCard}>
+                <View style={styles.betHeader}>
+                  <View style={[styles.betStatusBadge, styles.betStatusActive]}>
+                    <Text style={styles.betStatusText}>ACTIVE</Text>
+                  </View>
+                  <Text style={styles.betDate}>{new Date(bet.createdAt).toLocaleDateString()}</Text>
+                </View>
+                <Text style={styles.betQuestion}>{bet.pollQuestion}</Text>
+                <View style={styles.betDetails}>
+                  <View style={styles.betDetailRow}>
+                    <Text style={styles.betDetailLabel}>Your Pick:</Text>
+                    <Text style={styles.betDetailValue}>{bet.optionText}</Text>
+                  </View>
+                  <View style={styles.betDetailRow}>
+                    <Text style={styles.betDetailLabel}>Bet Amount:</Text>
+                    <Text style={styles.betDetailValue}>{bet.amount} ObroBucks</Text>
+                  </View>
+                  <View style={styles.betDetailRow}>
+                    <Text style={styles.betDetailLabel}>Potential Win:</Text>
+                    <Text style={[styles.betDetailValue, { color: '#2ecc71' }]}>
+                      {bet.potentialPayout} ObroBucks
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </>
+        )}
+
+        {!loadingBets && completedBets.length > 0 && (
+          <>
+            <Text style={styles.subsectionTitle}>Completed Bets ({completedBets.length})</Text>
+            {completedBets.map((bet) => (
+              <View key={bet.id} style={styles.betCard}>
+                <View style={styles.betHeader}>
+                  <View style={[
+                    styles.betStatusBadge,
+                    bet.isWinner ? styles.betStatusWon : styles.betStatusLost
+                  ]}>
+                    <Text style={styles.betStatusText}>
+                      {bet.isWinner ? '🏆 WON' : '❌ LOST'}
+                    </Text>
+                  </View>
+                  <Text style={styles.betDate}>{new Date(bet.createdAt).toLocaleDateString()}</Text>
+                </View>
+                <Text style={styles.betQuestion}>{bet.pollQuestion}</Text>
+                <View style={styles.betDetails}>
+                  <View style={styles.betDetailRow}>
+                    <Text style={styles.betDetailLabel}>Your Pick:</Text>
+                    <Text style={styles.betDetailValue}>{bet.optionText}</Text>
+                  </View>
+                  <View style={styles.betDetailRow}>
+                    <Text style={styles.betDetailLabel}>Bet Amount:</Text>
+                    <Text style={styles.betDetailValue}>{bet.amount} ObroBucks</Text>
+                  </View>
+                  <View style={styles.betDetailRow}>
+                    <Text style={styles.betDetailLabel}>
+                      {bet.isWinner ? 'Won:' : 'Lost:'}
+                    </Text>
+                    <Text style={[
+                      styles.betDetailValue,
+                      { color: bet.isWinner ? '#2ecc71' : '#e74c3c', fontWeight: '900' }
+                    ]}>
+                      {bet.isWinner ? `+${bet.potentialPayout}` : `-${bet.amount}`} ObroBucks
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </>
+        )}
       </View>
 
       {/* Action Buttons */}
@@ -328,6 +457,116 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  sectionContainer: {
+    marginHorizontal: 16,
+    marginTop: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#333',
+    marginBottom: 16,
+    letterSpacing: 0.3,
+  },
+  subsectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#666',
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#7C6FD8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#666',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+  },
+  betCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  betHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  betStatusBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  betStatusActive: {
+    backgroundColor: '#E3F2FD',
+  },
+  betStatusWon: {
+    backgroundColor: '#E8F5E9',
+  },
+  betStatusLost: {
+    backgroundColor: '#FFEBEE',
+  },
+  betStatusText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#333',
+  },
+  betDate: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '600',
+  },
+  betQuestion: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  betDetails: {
+    gap: 8,
+  },
+  betDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  betDetailLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+  },
+  betDetailValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '700',
   },
   buttonContainer: {
     paddingHorizontal: 16,

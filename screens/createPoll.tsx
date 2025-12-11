@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import { useUser } from '../contexts/UserContext';
 
 const API_BASE = 'https://betsocial-fde6ef886274.herokuapp.com';
 
@@ -59,12 +60,18 @@ function parseEndDate(input: string): Date | null {
 }
 
 export default function CreatePoll() {
+  const { user } = useUser(); // Get logged-in user
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState('');
   const [category, setCategory] = useState('');
   const [endsAtInput, setEndsAtInput] = useState('');
 
   const handleCreatePoll = async () => {
+    if (!user || !user.id) {
+      Alert.alert('Error', 'You must be logged in to create a poll.');
+      return;
+    }
+
     if (!question || !options || !category || !endsAtInput) {
       Alert.alert('Error', 'Please fill out all fields.');
       return;
@@ -91,6 +98,7 @@ export default function CreatePoll() {
           category,
           endsAt: endsAtIso,
           status: 'PENDING',
+          createdBy: user.id  // PASS ACTUAL USER ID
         }),
       });
 
