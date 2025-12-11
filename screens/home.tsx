@@ -35,17 +35,69 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
 
 const API_BASE = 'https://betsocial-fde6ef886274.herokuapp.com';
 
+// Timer Component
+function PollTimer({ endsAt }: { endsAt: string | null }) {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    if (!endsAt) return;
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const end = new Date(endsAt).getTime();
+      const distance = end - now;
+
+      if (distance < 0) {
+        setTimeLeft('Poll Ended');
+        return;
+      }
+
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      if (days > 0) {
+        setTimeLeft(`${days}d ${hours}h remaining`);
+      } else if (hours > 0) {
+        setTimeLeft(`${hours}h ${minutes}m remaining`);
+      } else if (minutes > 0) {
+        setTimeLeft(`${minutes}m ${seconds}s remaining`);
+      } else {
+        setTimeLeft(`${seconds}s remaining`);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [endsAt]);
+
+  if (!endsAt) return null;
+
+  return (
+    <View style={styles.timerContainer}>
+      <Ionicons name="time-outline" size={14} color="#666" />
+      <Text style={styles.timerText}>{timeLeft}</Text>
+    </View>
+  );
+}
+
 type PollCardProps = { 
   poll: Poll;
   onBetPlaced: () => void;
+  onPollDeleted: () => void;
 };
 
-function PollCard({ poll, onBetPlaced }: PollCardProps) {
+function PollCard({ poll, onBetPlaced, onPollDeleted }: PollCardProps) {
   const { user, refreshUser } = useUser();
   const [betAmount, setBetAmount] = useState('');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [pollStats, setPollStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [winner, setWinner] = useState<any>(null);
+  const [showMenu, setShowMenu] = useState(false);
 
   // Fetch poll betting stats
   useEffect(() => {
@@ -60,6 +112,22 @@ function PollCard({ poll, onBetPlaced }: PollCardProps) {
     };
     fetchStats();
   }, [poll.id]);
+
+  // Fetch winner if poll is closed
+  useEffect(() => {
+    const fetchWinner = async () => {
+      if (poll.status === 'CLOSED') {
+        try {
+          const res = await fetch(`${API_BASE}/api/polls/${poll.id}/winner`);
+          const data = await res.json();
+          setWinner(data);
+        } catch (e) {
+          console.error('Error fetching winner:', e);
+        }
+      }
+    };
+    fetchWinner();
+  }, [poll.id, poll.status]);
 
   const placeBet = async (option: string) => {
     if (!user || !user.id) {
@@ -98,15 +166,15 @@ function PollCard({ poll, onBetPlaced }: PollCardProps) {
         throw new Error(data.error || 'Failed to place bet');
       }
 
+      setBetAmount('');
+      setSelectedOption(null);
+      await refreshUser();
+      onBetPlaced();
+
       Alert.alert(
         '🎉 Bet Placed!',
         `You bet ${amount} ObroBucks on "${option}"\n\nPotential Payout: ${data.potentialPayout} ObroBucks\nNew Balance: ${data.newBalance} ObroBucks`
       );
-
-      setBetAmount('');
-      setSelectedOption(null);
-      await refreshUser();
-      onBetPlaced(); // Refresh polls
 
     } catch (error: any) {
       console.error('Error placing bet:', error);
@@ -116,13 +184,88 @@ function PollCard({ poll, onBetPlaced }: PollCardProps) {
     }
   };
 
+  const resolvePoll = async () => {
+    if (!selectedOption) {
+      Alert.alert('Select Winner', 'Please select the winning option first.');
+      return;
+    }
+
+    Alert.alert(
+      'Confirm Winner',
+      `Declare "${selectedOption}" as the winner? This will close the poll and pay out winners.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_BASE}/api/polls/${poll.id}/resolve`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ winningOption: selectedOption })
+              });
+
+              const data = await response.json();
+
+              if (!response.ok) {
+                throw new Error(data.error || 'Failed to resolve poll');
+              }
+
+              Alert.alert(
+                '✅ Poll Resolved!',
+                `Winner: ${selectedOption}\nWinners paid: ${data.winnersCount}\nTotal payout: ${data.totalPaidOut} ObroBucks`
+              );
+
+              onBetPlaced(); // Refresh polls
+
+            } catch (error: any) {
+              console.error('Error resolving poll:', error);
+              Alert.alert('Error', error.message || 'Failed to resolve poll.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const deletePoll = async () => {
+    Alert.alert(
+      'Delete Poll',
+      'Are you sure you want to delete this poll? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_BASE}/api/polls/${poll.id}`, {
+                method: 'DELETE'
+              });
+
+              if (!response.ok) {
+                throw new Error('Failed to delete poll');
+              }
+
+              Alert.alert('Success', 'Poll deleted successfully');
+              onPollDeleted();
+
+            } catch (error: any) {
+              console.error('Error deleting poll:', error);
+              Alert.alert('Error', error.message || 'Failed to delete poll.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const calculatePotentialPayout = (option: string) => {
     if (!pollStats || !betAmount) return 0;
     
     const amount = parseInt(betAmount);
     if (isNaN(amount) || amount <= 0) return 0;
 
-    // Simple 2x payout for now
     return amount * 2;
   };
 
@@ -139,6 +282,9 @@ function PollCard({ poll, onBetPlaced }: PollCardProps) {
       .join('')
       .slice(0, 2) || 'U';
 
+  const isCreator = user?.id === poll.created_by;
+  const isClosed = poll.status === 'CLOSED';
+
   return (
     <View style={styles.postCard}>
       <View style={styles.postHeader}>
@@ -151,28 +297,65 @@ function PollCard({ poll, onBetPlaced }: PollCardProps) {
             <Text style={styles.handle}>{handle} · just now</Text>
           </View>
         </View>
-        <TouchableOpacity>
-          <Text style={styles.moreButton}>⋯</Text>
-        </TouchableOpacity>
+        
+        {isCreator && (
+          <TouchableOpacity onPress={() => setShowMenu(!showMenu)}>
+            <Text style={styles.moreButton}>⋯</Text>
+          </TouchableOpacity>
+        )}
+        
+        {showMenu && isCreator && (
+          <View style={styles.menuDropdown}>
+            {!isClosed && (
+              <TouchableOpacity style={styles.menuItem} onPress={resolvePoll}>
+                <Ionicons name="checkmark-circle-outline" size={18} color="#2ecc71" />
+                <Text style={styles.menuText}>Resolve Poll</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.menuItem} onPress={deletePoll}>
+              <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+              <Text style={[styles.menuText, { color: '#e74c3c' }]}>Delete Poll</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <Text style={styles.pollQuestion}>{poll.question}</Text>
+
+      {/* Poll Timer */}
+      <PollTimer endsAt={poll.ends_at} />
+
+      {/* Closed Poll Banner */}
+      {isClosed && winner?.resolved && (
+        <View style={styles.closedBanner}>
+          <Ionicons name="trophy" size={16} color="#FFD700" />
+          <Text style={styles.closedText}>Winner: {winner.winningOption}</Text>
+        </View>
+      )}
 
       {poll.options.map((opt, idx) => {
         const optStats = pollStats?.optionStats?.[opt];
         const percentage = optStats?.percentage || 0;
         const totalBet = optStats?.total || 0;
         const isSelected = selectedOption === opt;
+        const isWinningOption = isClosed && winner?.winningOption === opt;
 
         return (
           <TouchableOpacity
             key={idx}
-            style={[styles.pollOption, isSelected && styles.pollOptionSelected]}
-            onPress={() => setSelectedOption(opt)}
+            style={[
+              styles.pollOption,
+              isSelected && styles.pollOptionSelected,
+              isWinningOption && styles.pollOptionWinner
+            ]}
+            onPress={() => !isClosed && setSelectedOption(opt)}
             activeOpacity={0.7}
+            disabled={isClosed}
           >
             <View style={styles.optionContent}>
-              <Text style={styles.optionText}>{opt}</Text>
+              <Text style={styles.optionText}>
+                {opt} {isWinningOption && '🏆'}
+              </Text>
               <Text style={styles.optionPercent}>{percentage.toFixed(1)}%</Text>
             </View>
             <View style={[styles.progressBar, { width: `${percentage}%` }]} />
@@ -181,28 +364,32 @@ function PollCard({ poll, onBetPlaced }: PollCardProps) {
         );
       })}
 
-      <View style={styles.betSection}>
-        <TextInput
-          style={styles.betInput}
-          placeholder="Bet amount"
-          placeholderTextColor="#999"
-          keyboardType="numeric"
-          value={betAmount}
-          onChangeText={setBetAmount}
-        />
-        <TouchableOpacity
-          style={[styles.placeBetButton, (!selectedOption || loading) && styles.buttonDisabled]}
-          onPress={() => selectedOption && placeBet(selectedOption)}
-          disabled={!selectedOption || loading}
-        >
-          <Text style={styles.buttonText}>{loading ? 'Placing...' : 'Place Bet'}</Text>
-        </TouchableOpacity>
-      </View>
+      {!isClosed && (
+        <>
+          <View style={styles.betSection}>
+            <TextInput
+              style={styles.betInput}
+              placeholder="Bet amount"
+              placeholderTextColor="#999"
+              keyboardType="numeric"
+              value={betAmount}
+              onChangeText={setBetAmount}
+            />
+            <TouchableOpacity
+              style={[styles.placeBetButton, (!selectedOption || loading) && styles.buttonDisabled]}
+              onPress={() => selectedOption && placeBet(selectedOption)}
+              disabled={!selectedOption || loading}
+            >
+              <Text style={styles.buttonText}>{loading ? 'Placing...' : 'Place Bet'}</Text>
+            </TouchableOpacity>
+          </View>
 
-      {selectedOption && betAmount && (
-        <Text style={styles.potentialPayout}>
-          Potential payout: {calculatePotentialPayout(selectedOption)} ObroBucks
-        </Text>
+          {selectedOption && betAmount && (
+            <Text style={styles.potentialPayout}>
+              Potential payout: {calculatePotentialPayout(selectedOption)} ObroBucks
+            </Text>
+          )}
+        </>
       )}
 
       <View style={styles.postFooter}>
@@ -252,27 +439,17 @@ export default function Home() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
+      {/* Header - same as before */}
       <View style={styles.header}>
         <View style={styles.logoSection}>
           <Text style={styles.logo}>BetSocial</Text>
         </View>
         <View style={styles.headerRight}>
           <View style={styles.balanceBox}>
-            <Ionicons
-              name="wallet"
-              size={14}
-              color="#7C6FD8"
-              style={styles.balanceIcon}
-            />
-            <Text style={styles.balanceText}>
-              {user?.obrobucks || 0}
-            </Text>
+            <Ionicons name="wallet" size={14} color="#7C6FD8" style={styles.balanceIcon} />
+            <Text style={styles.balanceText}>{user?.obrobucks || 0}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.profileCircle}
-            onPress={() => navigation.navigate('Profile')}
-          >
+          <TouchableOpacity style={styles.profileCircle} onPress={() => navigation.navigate('Profile')}>
             <Text style={styles.profileInitial}>
               {user?.first_name?.[0] || user?.name?.[0] || 'U'}
             </Text>
@@ -280,7 +457,7 @@ export default function Home() {
         </View>
       </View>
 
-      {/* Navigation Tabs */}
+      {/* Navigation Tabs - same as before */}
       <View style={styles.navTabs}>
         <TouchableOpacity style={styles.activeTab}>
           <View style={styles.tabContent}>
@@ -288,45 +465,32 @@ export default function Home() {
             <Text style={styles.activeTabText}>Feed</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.inactiveTab}
-          onPress={() => navigation.navigate('Profile')}
-        >
+        <TouchableOpacity style={styles.inactiveTab} onPress={() => navigation.navigate('Profile')}>
           <View style={styles.tabContent}>
             <Ionicons name="person" size={16} color="#999" />
             <Text style={styles.inactiveTabText}>Profile</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.inactiveTab}
-          onPress={() => navigation.navigate('Gambling')}
-        >
+        <TouchableOpacity style={styles.inactiveTab} onPress={() => navigation.navigate('Gambling')}>
           <View style={styles.tabContent}>
             <Text style={styles.inactiveTabText}>🎰 Casino</Text>
           </View>
         </TouchableOpacity>
       </View>
 
-      {/* Main Layout */}
+      {/* Main Layout - same as before with sidebar */}
       <View style={[styles.mainLayout, isWide && styles.rowLayout]}>
-        {/* Sidebar */}
         <View style={[styles.sidebar, isWide && styles.sidebarWide]}>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Create a Poll</Text>
-            <TouchableOpacity
-              style={styles.newPollButton}
-              onPress={() => navigation.navigate('CreatePoll')}
-            >
+            <TouchableOpacity style={styles.newPollButton} onPress={() => navigation.navigate('CreatePoll')}>
               <Text style={styles.newPollText}>+ New Poll</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Quick Actions</Text>
-            <TouchableOpacity
-              style={styles.casinoButton}
-              onPress={() => navigation.navigate('Gambling')}
-            >
+            <TouchableOpacity style={styles.casinoButton} onPress={() => navigation.navigate('Gambling')}>
               <Text style={styles.casinoButtonText}>🎰 Visit Casino</Text>
             </TouchableOpacity>
           </View>
@@ -366,20 +530,13 @@ export default function Home() {
 
         {/* Feed */}
         <View style={[styles.feed, isWide && styles.feedWide]}>
-          {loadingPolls && (
-            <Text style={{ color: '#666', marginBottom: 12 }}>Loading polls…</Text>
-          )}
-
+          {loadingPolls && <Text style={{ color: '#666', marginBottom: 12 }}>Loading polls…</Text>}
           {!loadingPolls && polls.length === 0 && (
-            <Text style={{ color: '#666', marginBottom: 12 }}>
-              No polls yet. Create one!
-            </Text>
+            <Text style={{ color: '#666', marginBottom: 12 }}>No polls yet. Create one!</Text>
           )}
-          
-          {!loadingPolls &&
-            polls.map((poll) => (
-              <PollCard key={poll.id} poll={poll} onBetPlaced={loadPolls} />
-            ))}
+          {!loadingPolls && polls.map((poll) => (
+            <PollCard key={poll.id} poll={poll} onBetPlaced={loadPolls} onPollDeleted={loadPolls} />
+          ))}
         </View>
       </View>
     </ScrollView>
@@ -387,13 +544,9 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f7',
-  },
-  content: {
-    padding: 0,
-  },
+  // ... keep all your existing styles from before ...
+  container: { flex: 1, backgroundColor: '#f5f5f7' },
+  content: { padding: 0 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -403,21 +556,9 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     backgroundColor: '#7C6FD8',
   },
-  logoSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logo: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
+  logoSection: { flexDirection: 'row', alignItems: 'center' },
+  logo: { color: '#fff', fontSize: 24, fontWeight: '900', letterSpacing: 0.5 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   balanceBox: {
     backgroundColor: '#fff',
     paddingVertical: 8,
@@ -432,19 +573,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  balanceIcon: {
-    marginTop: 1,
-  },
-  balanceText: {
-    fontWeight: '900',
-    color: '#7C6FD8',
-    fontSize: 14,
-  },
-  tabContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
+  balanceIcon: { marginTop: 1 },
+  balanceText: { fontWeight: '900', color: '#7C6FD8', fontSize: 14 },
+  tabContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   profileCircle: {
     width: 40,
     height: 40,
@@ -458,11 +589,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  profileInitial: {
-    color: '#7C6FD8',
-    fontWeight: '900',
-    fontSize: 16,
-  },
+  profileInitial: { color: '#7C6FD8', fontWeight: '900', fontSize: 16 },
   navTabs: {
     flexDirection: 'row',
     backgroundColor: '#fff',
@@ -487,43 +614,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  activeTabText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  inactiveTab: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  inactiveTabText: {
-    color: '#999',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  mainLayout: {
-    flexDirection: 'column',
-    padding: 16,
-  },
-  rowLayout: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  sidebar: {
-    flex: 1,
-    marginBottom: 20,
-  },
-  sidebarWide: {
-    width: '22%',
-    maxWidth: 280,
-    marginRight: 16,
-  },
-  feed: {
-    flex: 1,
-  },
-  feedWide: {
-    flex: 1,
-  },
+  activeTabText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  inactiveTab: { paddingVertical: 10, paddingHorizontal: 20 },
+  inactiveTabText: { color: '#999', fontSize: 14, fontWeight: '600' },
+  mainLayout: { flexDirection: 'column', padding: 16 },
+  rowLayout: { flexDirection: 'row', alignItems: 'flex-start' },
+  sidebar: { flex: 1, marginBottom: 20 },
+  sidebarWide: { width: '22%', maxWidth: 280, marginRight: 16 },
+  feed: { flex: 1 },
+  feedWide: { flex: 1 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 20,
@@ -535,13 +634,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 16,
-    color: '#333',
-    letterSpacing: 0.3,
-  },
+  cardTitle: { fontSize: 16, fontWeight: '900', marginBottom: 16, color: '#333', letterSpacing: 0.3 },
   statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -550,16 +643,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  statLabel: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '600',
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#7C6FD8',
-  },
+  statLabel: { fontSize: 14, color: '#666', fontWeight: '600' },
+  statValue: { fontSize: 14, fontWeight: '900', color: '#7C6FD8' },
   newPollButton: {
     backgroundColor: '#7C6FD8',
     padding: 14,
@@ -571,12 +656,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  newPollText: {
-    color: '#fff',
-    fontWeight: '900',
-    fontSize: 14,
-    letterSpacing: 0.5,
-  },
+  newPollText: { color: '#fff', fontWeight: '900', fontSize: 14, letterSpacing: 0.5 },
   casinoButton: {
     backgroundColor: '#FFA500',
     padding: 14,
@@ -588,11 +668,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  casinoButtonText: {
-    color: '#fff',
-    fontWeight: '900',
-    fontSize: 14,
-  },
+  casinoButtonText: { color: '#fff', fontWeight: '900', fontSize: 14 },
   trendingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -601,16 +677,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  link: {
-    color: '#7C6FD8',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  trendingCount: {
-    color: '#999',
-    fontSize: 13,
-    fontWeight: '600',
-  },
+  link: { color: '#7C6FD8', fontWeight: '700', fontSize: 14 },
+  trendingCount: { color: '#999', fontSize: 13, fontWeight: '600' },
   postCard: {
     backgroundColor: '#fff',
     borderRadius: 20,
@@ -628,11 +696,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 16,
   },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
+  userInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
     width: 48,
     height: 48,
@@ -641,36 +705,72 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarOrange: {
-    backgroundColor: '#FFB366',
+  avatarOrange: { backgroundColor: '#FFB366' },
+  avatarText: { color: '#fff', fontWeight: '900', fontSize: 16 },
+  username: { fontWeight: '900', fontSize: 16, color: '#333' },
+  handle: { color: '#999', fontSize: 13, fontWeight: '600' },
+  moreButton: { fontSize: 24, color: '#999', fontWeight: '700' },
+  
+  // NEW STYLES for timer, menu, and winner
+  timerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#f5f5f7',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 16,
   },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '900',
-    fontSize: 16,
-  },
-  username: {
-    fontWeight: '900',
-    fontSize: 16,
-    color: '#333',
-  },
-  handle: {
-    color: '#999',
+  timerText: {
     fontSize: 13,
+    color: '#666',
     fontWeight: '600',
   },
-  moreButton: {
-    fontSize: 24,
-    color: '#999',
-    fontWeight: '700',
+  menuDropdown: {
+    position: 'absolute',
+    right: 0,
+    top: 30,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+    minWidth: 160,
+    zIndex: 1000,
   },
-  pollQuestion: {
-    fontSize: 17,
-    marginBottom: 20,
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 8,
+  },
+  menuText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#333',
-    lineHeight: 24,
-    fontWeight: '600',
   },
+  closedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFF8DC',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  closedText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#B8860B',
+  },
+  
+  pollQuestion: { fontSize: 17, marginBottom: 20, color: '#333', lineHeight: 24, fontWeight: '600' },
   pollOption: {
     marginBottom: 16,
     backgroundColor: '#f5f5f7',
@@ -680,37 +780,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  pollOptionSelected: {
-    borderColor: '#7C6FD8',
-    backgroundColor: '#f0f0ff',
-  },
-  optionContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  optionText: {
-    fontSize: 15,
-    color: '#333',
-    fontWeight: '600',
-  },
-  optionPercent: {
-    fontWeight: '900',
-    color: '#7C6FD8',
-    fontSize: 15,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#7C6FD8',
-    borderRadius: 4,
-    marginBottom: 8,
-  },
-  betAmount: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'right',
-    fontWeight: '600',
-  },
+  pollOptionSelected: { borderColor: '#7C6FD8', backgroundColor: '#f0f0ff' },
+  pollOptionWinner: { borderColor: '#FFD700', backgroundColor: '#FFFACD' },
+  optionContent: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  optionText: { fontSize: 15, color: '#333', fontWeight: '600' },
+  optionPercent: { fontWeight: '900', color: '#7C6FD8', fontSize: 15 },
+  progressBar: { height: 8, backgroundColor: '#7C6FD8', borderRadius: 4, marginBottom: 8 },
+  betAmount: { fontSize: 12, color: '#999', textAlign: 'right', fontWeight: '600' },
   betSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -740,20 +816,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  buttonDisabled: {
-    opacity: 0.4,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '900',
-    fontSize: 14,
-  },
-  potentialPayout: {
-    fontSize: 14,
-    color: '#2ecc71',
-    marginBottom: 16,
-    fontWeight: '900',
-  },
+  buttonDisabled: { opacity: 0.4 },
+  buttonText: { color: '#fff', fontWeight: '900', fontSize: 14 },
+  potentialPayout: { fontSize: 14, color: '#2ecc71', marginBottom: 16, fontWeight: '900' },
   postFooter: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -762,20 +827,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
   },
-  footerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  footerCount: {
-    fontSize: 13,
-    color: '#999',
-    fontWeight: '600',
-  },
-  totalPool: {
-    marginLeft: 'auto',
-    color: '#2ecc71',
-    fontWeight: '900',
-    fontSize: 14,
-  },
+  footerItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  footerCount: { fontSize: 13, color: '#999', fontWeight: '600' },
+  totalPool: { marginLeft: 'auto', color: '#2ecc71', fontWeight: '900', fontSize: 14 },
 });
